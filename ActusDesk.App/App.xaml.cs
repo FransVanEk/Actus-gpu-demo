@@ -61,7 +61,7 @@ public partial class App : Application
         services.AddTransient<RunConsoleViewModel>();
 
         // Views
-        services.AddTransient<MainWindow>();
+        services.AddSingleton<MainWindow>();
     }
 
     protected override void OnExit(ExitEventArgs e)
