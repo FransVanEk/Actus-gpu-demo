@@ -1,0 +1,31 @@
+<Window x:Class="ActusDesk.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ActusDesk - ACTUS Contract Valuation" 
+        Height="768" Width="1366"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <TabControl>
+            <TabItem Header="Workspace">
+                <TextBlock Text="Workspace View - Load contracts, manage cache" 
+                          Margin="20" FontSize="14"/>
+            </TabItem>
+            <TabItem Header="Portfolio">
+                <TextBlock Text="Portfolio View - Browse contracts" 
+                          Margin="20" FontSize="14"/>
+            </TabItem>
+            <TabItem Header="Scenarios">
+                <TextBlock Text="Scenarios View - Define shocks and filters" 
+                          Margin="20" FontSize="14"/>
+            </TabItem>
+            <TabItem Header="Reporting">
+                <TextBlock Text="Reporting View - Configure outputs" 
+                          Margin="20" FontSize="14"/>
+            </TabItem>
+            <TabItem Header="Run Console">
+                <TextBlock Text="Run Console - Execute valuations and view results" 
+                          Margin="20" FontSize="14"/>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>

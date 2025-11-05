@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Base",
+    "shocks": [],
+    "portfolio_ops": []
+  },
+  {
+    "name": "RatePlus50",
+    "shocks": [
+      {
+        "kind": "parallel_rate_bump_bps",
+        "value": 50
+      }
+    ],
+    "portfolio_ops": []
+  },
+  {
+    "name": "RateMinus100",
+    "shocks": [
+      {
+        "kind": "parallel_rate_bump_bps",
+        "value": -100
+      }
+    ],
+    "portfolio_ops": []
+  }
+]
