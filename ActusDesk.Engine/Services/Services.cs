@@ -1,6 +1,7 @@
 using System.Buffers;
 using ActusDesk.Domain;
 using ActusDesk.Domain.Pam;
+using ActusDesk.Engine.Models;
 using ActusDesk.Gpu;
 using ActusDesk.IO;
 using Microsoft.Extensions.Logging;
@@ -107,20 +108,128 @@ public class ContractsService
 
 /// <summary>
 /// Service for managing valuation scenarios
+/// Handles loading, saving, and applying scenarios with multiple event types
 /// </summary>
 public class ScenarioService
 {
     private readonly ILogger<ScenarioService> _logger;
+    private readonly List<ScenarioDefinition> _scenarios = new();
 
     public ScenarioService(ILogger<ScenarioService> logger)
     {
         _logger = logger;
     }
 
-    public Task LoadScenariosAsync(string file, CancellationToken ct = default)
+    public IReadOnlyList<ScenarioDefinition> Scenarios => _scenarios.AsReadOnly();
+
+    /// <summary>
+    /// Load scenarios from a JSON file
+    /// </summary>
+    public async Task LoadScenariosAsync(string file, CancellationToken ct = default)
     {
         _logger.LogInformation("Loading scenarios from: {File}", file);
-        return Task.CompletedTask;
+        
+        if (!File.Exists(file))
+        {
+            _logger.LogWarning("Scenario file not found: {File}", file);
+            return;
+        }
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(file, ct);
+            var scenarios = System.Text.Json.JsonSerializer.Deserialize<List<ScenarioDefinition>>(json);
+            
+            if (scenarios != null)
+            {
+                _scenarios.Clear();
+                _scenarios.AddRange(scenarios);
+                _logger.LogInformation("Loaded {Count} scenarios", _scenarios.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading scenarios from {File}", file);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Save scenarios to a JSON file
+    /// </summary>
+    public async Task SaveScenariosAsync(string file, CancellationToken ct = default)
+    {
+        _logger.LogInformation("Saving {Count} scenarios to: {File}", _scenarios.Count, file);
+        
+        try
+        {
+            var options = new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(_scenarios, options);
+            await File.WriteAllTextAsync(file, json, ct);
+            _logger.LogInformation("Scenarios saved successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving scenarios to {File}", file);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Add a new scenario
+    /// </summary>
+    public void AddScenario(ScenarioDefinition scenario)
+    {
+        _scenarios.Add(scenario);
+        _logger.LogInformation("Added scenario: {Name}", scenario.Name);
+    }
+
+    /// <summary>
+    /// Remove a scenario by name
+    /// </summary>
+    public bool RemoveScenario(string name)
+    {
+        var removed = _scenarios.RemoveAll(s => s.Name == name);
+        if (removed > 0)
+        {
+            _logger.LogInformation("Removed scenario: {Name}", name);
+        }
+        return removed > 0;
+    }
+
+    /// <summary>
+    /// Get a scenario by name
+    /// </summary>
+    public ScenarioDefinition? GetScenario(string name)
+    {
+        return _scenarios.FirstOrDefault(s => s.Name == name);
+    }
+
+    /// <summary>
+    /// Update an existing scenario
+    /// </summary>
+    public bool UpdateScenario(string name, ScenarioDefinition updatedScenario)
+    {
+        var index = _scenarios.FindIndex(s => s.Name == name);
+        if (index >= 0)
+        {
+            _scenarios[index] = updatedScenario;
+            _logger.LogInformation("Updated scenario: {Name}", name);
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Clear all scenarios
+    /// </summary>
+    public void ClearScenarios()
+    {
+        _scenarios.Clear();
+        _logger.LogInformation("Cleared all scenarios");
     }
 }
 

@@ -78,30 +78,50 @@ public sealed record ContractsSoA : IDisposable
 
 /// <summary>
 /// Scenario definition for shocks and portfolio operations
+/// A scenario is a list of events that can occur on a date or over a period
 /// </summary>
 public sealed record ScenarioDefinition
 {
     public required string Name { get; init; }
-    public List<ShockDefinition> Shocks { get; init; } = new();
-    public List<PortfolioOperation> PortfolioOps { get; init; } = new();
+    public string? Description { get; init; }
+    public List<ScenarioEvent> Events { get; init; } = new();
 }
 
 /// <summary>
-/// Shock definition (rate bump, spread shock, etc.)
+/// Base class for scenario events that can occur on a date or over a period
 /// </summary>
-public sealed record ShockDefinition
+public abstract record ScenarioEvent
 {
-    public required string Kind { get; init; } // "parallel_rate_bump_bps", "twist", etc.
-    public float Value { get; init; }
+    public required string EventType { get; init; }
+    public DateOnly? StartDate { get; init; }
+    public DateOnly? EndDate { get; init; }
+}
+
+/// <summary>
+/// Rate shock event (parallel rate bump, spread shock, etc.)
+/// </summary>
+public sealed record RateShockEvent : ScenarioEvent
+{
+    public required double ValueBps { get; init; } // Value in basis points
     public string? Curve { get; init; }
+    public string? ShockType { get; init; } // "parallel", "twist", "shock_at_tenor", etc.
 }
 
 /// <summary>
-/// Portfolio filter/remap operation
+/// PAM value adjustment event (e.g., for early contract abandonment)
 /// </summary>
-public sealed record PortfolioOperation
+public sealed record ValueAdjustmentEvent : ScenarioEvent
 {
-    public required string Kind { get; init; } // "filter", "remap", etc.
+    public required double PercentageChange { get; init; } // -10 for 10% decrease, +5 for 5% increase
+    public string? ContractFilter { get; init; } // Optional: filter which contracts are affected
+}
+
+/// <summary>
+/// Portfolio filter/remap operation event
+/// </summary>
+public sealed record PortfolioOperationEvent : ScenarioEvent
+{
+    public required string Operation { get; init; } // "filter", "remap", etc.
     public Dictionary<string, object> Parameters { get; init; } = new();
 }
 

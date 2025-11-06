@@ -142,24 +142,128 @@
             </TabItem>
             
             <TabItem Header="Scenarios">
+                <TabItem.DataContext>
+                    <Binding Path="DataContext.ScenariosViewModel" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                </TabItem.DataContext>
                 <Grid Margin="20">
-                    <StackPanel>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Header -->
+                    <StackPanel Grid.Row="0">
                         <TextBlock Text="Scenarios" Style="{StaticResource HeaderStyle}"/>
-                        <TextBlock Text="Define rate shocks and portfolio operations."
+                        <TextBlock Text="Define scenarios with multiple events such as rate shocks and value adjustments."
                                   Style="{StaticResource InfoStyle}" Foreground="Gray"/>
                         
+                        <!-- File Management -->
                         <Border BorderBrush="LightGray" BorderThickness="1" Padding="15" Margin="0,20,0,0"
                                Background="{StaticResource SurfaceBrush}">
                             <StackPanel>
-                                <TextBlock Text="Available Scenarios:" FontWeight="SemiBold"/>
-                                <ListBox Height="200" Margin="0,10,0,0">
-                                    <ListBoxItem>Base (no shocks)</ListBoxItem>
-                                    <ListBoxItem>Rate +50 bps</ListBoxItem>
-                                    <ListBoxItem>Rate -100 bps</ListBoxItem>
-                                </ListBox>
+                                <TextBlock Text="Scenario File" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="File:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBox Grid.Column="1" Margin="0,0,10,0" 
+                                            Text="{Binding ScenarioFilePath, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <Button Grid.Column="2" Content="Browse..." Padding="10,5"
+                                           Command="{Binding BrowseScenariosCommand}"/>
+                                </Grid>
+                                
+                                <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
+                                    <Button Content="Load Scenarios" Padding="15,8" Margin="0,0,10,0"
+                                           Background="{StaticResource PrimaryBrush}" Foreground="White"
+                                           Command="{Binding LoadScenariosCommand}"
+                                           IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"/>
+                                    <Button Content="Save Scenarios" Padding="15,8"
+                                           Background="{StaticResource AccentBrush}" Foreground="White"
+                                           Command="{Binding SaveScenariosCommand}"
+                                           IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"/>
+                                </StackPanel>
+                                
+                                <TextBlock Text="{Binding StatusMessage}" Margin="0,10,0,0" 
+                                          Foreground="Green" FontWeight="SemiBold"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
+                    
+                    <!-- Scenario Management -->
+                    <Border Grid.Row="1" BorderBrush="LightGray" BorderThickness="1" Padding="15" Margin="0,20,0,0"
+                           Background="{StaticResource SurfaceBrush}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="300"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Scenario List -->
+                            <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                                <TextBlock Text="Available Scenarios:" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <ListBox Height="300" ItemsSource="{Binding Scenarios}" 
+                                        SelectedItem="{Binding SelectedScenario}"
+                                        DisplayMemberPath="Name"/>
+                                
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <Button Content="Add Scenario" Padding="10,5" Margin="0,0,5,0"
+                                           Command="{Binding AddScenarioCommand}"/>
+                                    <Button Content="Remove" Padding="10,5"
+                                           Command="{Binding RemoveScenarioCommand}"
+                                           IsEnabled="{Binding SelectedScenario, Converter={StaticResource InverseBoolConverter}, ConverterParameter=Null}"/>
+                                </StackPanel>
+                            </StackPanel>
+                            
+                            <!-- Scenario Details -->
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Scenario Details:" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                
+                                <StackPanel Visibility="{Binding SelectedScenario, Converter={StaticResource InverseBoolToVisibilityConverter}, ConverterParameter=Null}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        
+                                        <TextBlock Text="Name:" Grid.Row="0" Grid.Column="0" Margin="0,0,10,10" VerticalAlignment="Center"/>
+                                        <TextBox Text="{Binding SelectedScenario.Name}" Grid.Row="0" Grid.Column="1" Margin="0,0,0,10"/>
+                                        
+                                        <TextBlock Text="Description:" Grid.Row="1" Grid.Column="0" Margin="0,0,10,10" VerticalAlignment="Top"/>
+                                        <TextBox Text="{Binding SelectedScenario.Description}" Grid.Row="1" Grid.Column="1" 
+                                                Margin="0,0,0,10" MinHeight="60" TextWrapping="Wrap" AcceptsReturn="True"/>
+                                        
+                                        <TextBlock Text="Events:" Grid.Row="2" Grid.Column="0" Margin="0,0,10,10" VerticalAlignment="Top"/>
+                                        <StackPanel Grid.Row="2" Grid.Column="1">
+                                            <TextBlock Text="{Binding SelectedScenario.Events.Count, StringFormat='Event count: {0}'}" 
+                                                      FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                            
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                                <Button Content="Add Rate Shock" Padding="10,5" Margin="0,0,5,0"
+                                                       Command="{Binding AddRateShockEventCommand}"/>
+                                                <Button Content="Add Value Adjustment" Padding="10,5"
+                                                       Command="{Binding AddValueAdjustmentEventCommand}"/>
+                                            </StackPanel>
+                                            
+                                            <TextBlock Text="Event types: Rate shocks, value adjustments over date ranges" 
+                                                      Foreground="Gray" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                                
+                                <TextBlock Text="Select a scenario to view details" 
+                                          Foreground="Gray" 
+                                          Visibility="{Binding SelectedScenario, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Null}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
                 </Grid>
             </TabItem>
             

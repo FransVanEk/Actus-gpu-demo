@@ -1,27 +1,59 @@
 [
   {
     "name": "Base",
-    "shocks": [],
-    "portfolio_ops": []
+    "description": "Base scenario with no shocks or adjustments",
+    "events": []
   },
   {
     "name": "RatePlus50",
-    "shocks": [
+    "description": "Parallel rate shock of +50 basis points",
+    "events": [
       {
-        "kind": "parallel_rate_bump_bps",
-        "value": 50
+        "eventType": "RateShock",
+        "valueBps": 50,
+        "shockType": "parallel"
       }
-    ],
-    "portfolio_ops": []
+    ]
   },
   {
     "name": "RateMinus100",
-    "shocks": [
+    "description": "Parallel rate shock of -100 basis points",
+    "events": [
       {
-        "kind": "parallel_rate_bump_bps",
-        "value": -100
+        "eventType": "RateShock",
+        "valueBps": -100,
+        "shockType": "parallel"
       }
-    ],
-    "portfolio_ops": []
+    ]
+  },
+  {
+    "name": "EarlyAbandonment",
+    "description": "10% value decline due to early contract abandonment over 6 months",
+    "events": [
+      {
+        "eventType": "ValueAdjustment",
+        "percentageChange": -10,
+        "startDate": "2024-06-01",
+        "endDate": "2024-12-01"
+      }
+    ]
+  },
+  {
+    "name": "StressScenario",
+    "description": "Combined stress scenario: rate increase and value decline",
+    "events": [
+      {
+        "eventType": "RateShock",
+        "valueBps": 200,
+        "shockType": "parallel",
+        "startDate": "2024-01-01"
+      },
+      {
+        "eventType": "ValueAdjustment",
+        "percentageChange": -15,
+        "startDate": "2024-03-01",
+        "endDate": "2024-09-01"
+      }
+    ]
   }
 ]
