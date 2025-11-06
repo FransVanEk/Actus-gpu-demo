@@ -88,7 +88,7 @@ public partial class WorkspaceViewModel : ObservableObject
             StatusMessage = "Generating mock contracts...";
             _logger.LogInformation("Generating mock contracts");
 
-            await _contractsService.LoadMockContractsAsync(1000, seed: 42);
+            await _contractsService.LoadMockContractsAsync(100000, seed: 42);
             ContractCount = _contractsService.ContractCount;
             StatusMessage = $"Generated {ContractCount} mock contracts successfully";
             _logger.LogInformation("Successfully generated {Count} mock contracts", ContractCount);

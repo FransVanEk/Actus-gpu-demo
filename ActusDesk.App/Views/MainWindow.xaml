@@ -99,7 +99,7 @@
                                        Command="{Binding LoadContractsCommand}"
                                        IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"/>
                                 
-                                <Button Content="Generate Mock Contracts (1000)" Margin="10,15,0,0" Padding="20,10"
+                                <Button Content="Generate Mock Contracts (100000)" Margin="10,15,0,0" Padding="20,10"
                                        Background="{StaticResource AccentBrush}" Foreground="White"
                                        HorizontalAlignment="Left"
                                        Command="{Binding LoadMockContractsCommand}"
