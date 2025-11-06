@@ -130,7 +130,17 @@ All tests use xUnit framework. Current coverage:
 - PAM interest payment generation
 - Deterministic valuation
 
-**Total: 15 tests, all passing**
+### Scenario Tests (16 tests)
+- Rate shock event application
+- Multiple rate shock combination
+- Date range event filtering
+- Value adjustment events
+- Event type filtering
+- ScenarioService CRUD operations
+- JSON serialization/deserialization
+- Scenario file loading
+
+**Total: 119 tests, all passing**
 
 ## Running the Application
 
@@ -189,6 +199,98 @@ Displays:
 1. Define kernel as static method in `ValuationKernels`
 2. Load kernel in `GpuContext`
 3. Call from `ValuationService`
+
+## Scenario Module
+
+### Overview
+The scenario module provides a flexible event-based system for defining market shocks and portfolio adjustments. Scenarios can include multiple events that occur on specific dates or over date ranges.
+
+### Event Types
+
+#### 1. Rate Shock Events
+Apply interest rate shocks to contracts:
+```json
+{
+  "eventType": "RateShock",
+  "valueBps": 50,
+  "shockType": "parallel",
+  "startDate": "2024-01-01",
+  "endDate": "2024-12-31"
+}
+```
+
+#### 2. Value Adjustment Events
+Apply percentage changes to contract values (e.g., for early abandonment):
+```json
+{
+  "eventType": "ValueAdjustment",
+  "percentageChange": -10,
+  "startDate": "2024-06-01",
+  "endDate": "2024-12-01"
+}
+```
+
+#### 3. Portfolio Operation Events
+Filter or transform portfolios:
+```json
+{
+  "eventType": "PortfolioOperation",
+  "operation": "filter",
+  "parameters": {
+    "currency": "USD"
+  }
+}
+```
+
+### Scenario Definition Format
+```json
+{
+  "name": "StressScenario",
+  "description": "Combined stress scenario: rate increase and value decline",
+  "events": [
+    {
+      "eventType": "RateShock",
+      "valueBps": 200,
+      "shockType": "parallel",
+      "startDate": "2024-01-01"
+    },
+    {
+      "eventType": "ValueAdjustment",
+      "percentageChange": -15,
+      "startDate": "2024-03-01",
+      "endDate": "2024-09-01"
+    }
+  ]
+}
+```
+
+### Date Range Behavior
+- **No dates**: Event is always active
+- **StartDate only**: Active from start date onwards
+- **EndDate only**: Active until end date
+- **Both dates**: Active within range (inclusive)
+
+### Using Scenarios in Code
+```csharp
+// Create a scenario
+var scenario = new PamScenario("StressTest", "Stress scenario");
+scenario.AddEvent(new ScenarioEventDefinition
+{
+    EventType = ScenarioEventType.RateShock,
+    ValueBps = 200
+});
+
+// Apply to contract events
+PamEventApplier.ApplyEvents(events, model, scenario, state);
+```
+
+### Managing Scenarios in the UI
+The Scenarios tab provides:
+- Load/Save scenarios from JSON files
+- Add/Remove scenarios
+- Create rate shock events
+- Create value adjustment events
+- View scenario details and event lists
 
 ## Performance Considerations
 
