@@ -12,6 +12,9 @@
         <local:InverseBooleanConverter x:Key="InverseBoolConverter"/>
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
         <local:ZeroToCollapsedConverter x:Key="ZeroToCollapsedConverter"/>
+        <local:NullToBoolConverter x:Key="NullToBoolConverter"/>
+        <local:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <local:InverseNullToVisibilityConverter x:Key="InverseNullToVisibilityConverter"/>
         
         <!-- Styles -->
         <Style TargetType="TextBlock" x:Key="HeaderStyle">
@@ -213,7 +216,7 @@
                                            Command="{Binding AddScenarioCommand}"/>
                                     <Button Content="Remove" Padding="10,5"
                                            Command="{Binding RemoveScenarioCommand}"
-                                           IsEnabled="{Binding SelectedScenario, Converter={StaticResource InverseBoolConverter}, ConverterParameter=Null}"/>
+                                           IsEnabled="{Binding SelectedScenario, Converter={StaticResource NullToBoolConverter}}"/>
                                 </StackPanel>
                             </StackPanel>
                             
@@ -221,7 +224,7 @@
                             <StackPanel Grid.Column="1">
                                 <TextBlock Text="Scenario Details:" FontWeight="SemiBold" Margin="0,0,0,10"/>
                                 
-                                <StackPanel Visibility="{Binding SelectedScenario, Converter={StaticResource InverseBoolToVisibilityConverter}, ConverterParameter=Null}">
+                                <StackPanel Visibility="{Binding SelectedScenario, Converter={StaticResource NullToVisibilityConverter}}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -260,7 +263,7 @@
                                 
                                 <TextBlock Text="Select a scenario to view details" 
                                           Foreground="Gray" 
-                                          Visibility="{Binding SelectedScenario, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Null}"/>
+                                          Visibility="{Binding SelectedScenario, Converter={StaticResource InverseNullToVisibilityConverter}}"/>
                             </StackPanel>
                         </Grid>
                     </Border>

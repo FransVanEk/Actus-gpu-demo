@@ -349,9 +349,8 @@ public class ScenarioTests
         
         PamEventApplier.ApplyEvents(events, model, scenario, state);
 
-        // Assert - Rate should include the scenario shock
-        // The base implementation adds the scenario rate override during RR events
-        // So the final rate should reflect the shock
+        // Assert - Rate should be set to the scenario override value
+        // Scenario provides 200 bps = 0.02 as the new rate (not added to base)
         Assert.Equal(0.02, state.NominalInterestRate, precision: 5);
     }
 
