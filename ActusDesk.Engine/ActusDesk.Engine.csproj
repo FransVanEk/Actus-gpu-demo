@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ActusDesk.Domain\ActusDesk.Domain.csproj" />
     <ProjectReference Include="..\ActusDesk.Gpu\ActusDesk.Gpu.csproj" />
+    <ProjectReference Include="..\ActusDesk.IO\ActusDesk.IO.csproj" />
   </ItemGroup>
 
 </Project>

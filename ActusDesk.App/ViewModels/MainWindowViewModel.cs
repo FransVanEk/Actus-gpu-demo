@@ -13,9 +13,14 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "Ready";
 
-    public MainWindowViewModel(ILogger<MainWindowViewModel> logger)
+    public WorkspaceViewModel WorkspaceViewModel { get; }
+
+    public MainWindowViewModel(
+        ILogger<MainWindowViewModel> logger,
+        WorkspaceViewModel workspaceViewModel)
     {
         _logger = logger;
+        WorkspaceViewModel = workspaceViewModel;
         _logger.LogInformation("MainWindowViewModel initialized");
     }
 }
