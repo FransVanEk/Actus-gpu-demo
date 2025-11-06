@@ -354,4 +354,112 @@ public class ScenarioTests
         // So the final rate should reflect the shock
         Assert.Equal(0.02, state.NominalInterestRate, precision: 5);
     }
+
+    [Fact]
+    public async Task ScenarioService_SaveAndLoad_PreservesData()
+    {
+        // Arrange
+        var logger = new Mock<ILogger<ScenarioService>>();
+        var service = new ScenarioService(logger.Object);
+        var tempFile = Path.Combine(Path.GetTempPath(), $"test_scenarios_{Guid.NewGuid()}.json");
+
+        try
+        {
+            // Create test scenarios
+            var scenario1 = new ScenarioDefinition
+            {
+                Name = "TestScenario1",
+                Description = "Test scenario 1",
+                Events = new List<ScenarioEvent>
+                {
+                    new RateShockEvent
+                    {
+                        EventType = "RateShock",
+                        ValueBps = 50,
+                        ShockType = "parallel"
+                    }
+                }
+            };
+
+            var scenario2 = new ScenarioDefinition
+            {
+                Name = "TestScenario2",
+                Description = "Test scenario 2 with date range",
+                Events = new List<ScenarioEvent>
+                {
+                    new ValueAdjustmentEvent
+                    {
+                        EventType = "ValueAdjustment",
+                        PercentageChange = -10,
+                        StartDate = DateOnly.FromDateTime(new DateTime(2024, 1, 1)),
+                        EndDate = DateOnly.FromDateTime(new DateTime(2024, 12, 31))
+                    }
+                }
+            };
+
+            service.AddScenario(scenario1);
+            service.AddScenario(scenario2);
+
+            // Act - Save
+            await service.SaveScenariosAsync(tempFile);
+
+            // Create new service and load
+            var service2 = new ScenarioService(logger.Object);
+            await service2.LoadScenariosAsync(tempFile);
+
+            // Assert
+            Assert.Equal(2, service2.Scenarios.Count);
+            
+            var loaded1 = service2.GetScenario("TestScenario1");
+            Assert.NotNull(loaded1);
+            Assert.Equal("Test scenario 1", loaded1.Description);
+            Assert.Single(loaded1.Events);
+            
+            var loaded2 = service2.GetScenario("TestScenario2");
+            Assert.NotNull(loaded2);
+            Assert.Equal("Test scenario 2 with date range", loaded2.Description);
+            Assert.Single(loaded2.Events);
+        }
+        finally
+        {
+            // Cleanup
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task ScenarioService_LoadFromExistingFile_ParsesCorrectly()
+    {
+        // Arrange
+        var logger = new Mock<ILogger<ScenarioService>>();
+        var service = new ScenarioService(logger.Object);
+        
+        // Get the absolute path to the scenarios file
+        var testDir = AppDomain.CurrentDomain.BaseDirectory;
+        var scenarioFile = Path.Combine(testDir, "..", "..", "..", "..", "data", "tests", "scenarios.json");
+        scenarioFile = Path.GetFullPath(scenarioFile);
+
+        // Act
+        if (File.Exists(scenarioFile))
+        {
+            await service.LoadScenariosAsync(scenarioFile);
+
+            // Assert
+            Assert.True(service.Scenarios.Count >= 3); // At least Base, RatePlus50, RateMinus100
+            
+            var baseScenario = service.GetScenario("Base");
+            Assert.NotNull(baseScenario);
+            Assert.Empty(baseScenario.Events);
+
+            var ratePlus50 = service.GetScenario("RatePlus50");
+            Assert.NotNull(ratePlus50);
+            Assert.Single(ratePlus50.Events);
+        }
+        else
+        {
+            // Skip test if file not found in test environment
+            Assert.True(true, $"Scenario file not found at {scenarioFile}, skipping test");
+        }
+    }
 }

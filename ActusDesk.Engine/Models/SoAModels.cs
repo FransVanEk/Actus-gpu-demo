@@ -84,12 +84,17 @@ public sealed record ScenarioDefinition
 {
     public required string Name { get; init; }
     public string? Description { get; init; }
+    
+    [System.Text.Json.Serialization.JsonConverter(typeof(ScenarioEventListConverter))]
     public List<ScenarioEvent> Events { get; init; } = new();
 }
 
 /// <summary>
 /// Base class for scenario events that can occur on a date or over a period
 /// </summary>
+[System.Text.Json.Serialization.JsonDerivedType(typeof(RateShockEvent), typeDiscriminator: "RateShock")]
+[System.Text.Json.Serialization.JsonDerivedType(typeof(ValueAdjustmentEvent), typeDiscriminator: "ValueAdjustment")]
+[System.Text.Json.Serialization.JsonDerivedType(typeof(PortfolioOperationEvent), typeDiscriminator: "PortfolioOperation")]
 public abstract record ScenarioEvent
 {
     public required string EventType { get; init; }
@@ -139,5 +144,60 @@ public readonly record struct TimeGrid
         Start = start;
         End = end;
         Frequency = frequency;
+    }
+}
+
+/// <summary>
+/// Custom JSON converter for polymorphic ScenarioEvent list
+/// </summary>
+public class ScenarioEventListConverter : System.Text.Json.Serialization.JsonConverter<List<ScenarioEvent>>
+{
+    public override List<ScenarioEvent> Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+    {
+        var events = new List<ScenarioEvent>();
+        
+        if (reader.TokenType != System.Text.Json.JsonTokenType.StartArray)
+            throw new System.Text.Json.JsonException("Expected start of array");
+
+        while (reader.Read())
+        {
+            if (reader.TokenType == System.Text.Json.JsonTokenType.EndArray)
+                break;
+
+            if (reader.TokenType != System.Text.Json.JsonTokenType.StartObject)
+                throw new System.Text.Json.JsonException("Expected start of object");
+
+            using var doc = System.Text.Json.JsonDocument.ParseValue(ref reader);
+            var root = doc.RootElement;
+            
+            if (!root.TryGetProperty("eventType", out var eventTypeElement))
+                throw new System.Text.Json.JsonException("Missing eventType property");
+
+            var eventType = eventTypeElement.GetString();
+            ScenarioEvent? evt = eventType switch
+            {
+                "RateShock" => System.Text.Json.JsonSerializer.Deserialize<RateShockEvent>(root.GetRawText(), options),
+                "ValueAdjustment" => System.Text.Json.JsonSerializer.Deserialize<ValueAdjustmentEvent>(root.GetRawText(), options),
+                "PortfolioOperation" => System.Text.Json.JsonSerializer.Deserialize<PortfolioOperationEvent>(root.GetRawText(), options),
+                _ => throw new System.Text.Json.JsonException($"Unknown event type: {eventType}")
+            };
+            
+            if (evt != null)
+                events.Add(evt);
+        }
+
+        return events;
+    }
+
+    public override void Write(System.Text.Json.Utf8JsonWriter writer, List<ScenarioEvent> value, System.Text.Json.JsonSerializerOptions options)
+    {
+        writer.WriteStartArray();
+        
+        foreach (var evt in value)
+        {
+            System.Text.Json.JsonSerializer.Serialize(writer, evt, evt.GetType(), options);
+        }
+        
+        writer.WriteEndArray();
     }
 }

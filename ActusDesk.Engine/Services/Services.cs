@@ -138,7 +138,13 @@ public class ScenarioService
         try
         {
             var json = await File.ReadAllTextAsync(file, ct);
-            var scenarios = System.Text.Json.JsonSerializer.Deserialize<List<ScenarioDefinition>>(json);
+            var options = new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+            };
+            
+            var scenarios = System.Text.Json.JsonSerializer.Deserialize<List<ScenarioDefinition>>(json, options);
             
             if (scenarios != null)
             {
@@ -165,7 +171,10 @@ public class ScenarioService
         {
             var options = new System.Text.Json.JsonSerializerOptions
             {
-                WriteIndented = true
+                WriteIndented = true,
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+                Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
             };
             var json = System.Text.Json.JsonSerializer.Serialize(_scenarios, options);
             await File.WriteAllTextAsync(file, json, ct);
