@@ -55,7 +55,9 @@ public static class ScheduleFactory
         if (cleanCycle.EndsWith("M", StringComparison.OrdinalIgnoreCase))
         {
             // Month cycle
-            int months = int.Parse(cleanCycle[..^1]);
+            if (!int.TryParse(cleanCycle[..^1], out int months) || months <= 0)
+                throw new ArgumentException($"Invalid month cycle format: {cycle}");
+            
             var result = date.AddMonths(months);
             
             if (endOfMonth)
@@ -70,19 +72,22 @@ public static class ScheduleFactory
         else if (cleanCycle.EndsWith("Y", StringComparison.OrdinalIgnoreCase))
         {
             // Year cycle
-            int years = int.Parse(cleanCycle[..^1]);
+            if (!int.TryParse(cleanCycle[..^1], out int years) || years <= 0)
+                throw new ArgumentException($"Invalid year cycle format: {cycle}");
             return date.AddYears(years);
         }
         else if (cleanCycle.EndsWith("D", StringComparison.OrdinalIgnoreCase))
         {
             // Day cycle
-            int days = int.Parse(cleanCycle[..^1]);
+            if (!int.TryParse(cleanCycle[..^1], out int days) || days <= 0)
+                throw new ArgumentException($"Invalid day cycle format: {cycle}");
             return date.AddDays(days);
         }
         else if (cleanCycle.EndsWith("W", StringComparison.OrdinalIgnoreCase))
         {
             // Week cycle
-            int weeks = int.Parse(cleanCycle[..^1]);
+            if (!int.TryParse(cleanCycle[..^1], out int weeks) || weeks <= 0)
+                throw new ArgumentException($"Invalid week cycle format: {cycle}");
             return date.AddDays(weeks * 7);
         }
         else

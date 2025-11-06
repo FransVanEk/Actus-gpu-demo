@@ -122,11 +122,11 @@ public static class PamEventApplier
     private static void ApplyIP(PamContractModel model, PamState state, DateTime eventDate)
     {
         // Interest payment: accrued interest is paid, reset to zero
+        // Note: In a full implementation, accrued interest would be calculated here
+        // based on day count convention and time since last payment.
+        // For this simplified implementation, we assume interest is externally tracked.
         state.AccruedInterest = 0.0;
         state.StatusDate = eventDate;
-        
-        // In reality, accrued interest would be calculated here based on day count
-        // For now, we just reset it
     }
 
     private static void ApplyIPCI(PamContractModel model, PamState state, DateTime eventDate)
@@ -175,9 +175,10 @@ public static class PamEventApplier
 
     private static void ApplySC(PamContractModel model, PamState state, DateTime eventDate)
     {
-        // Scaling: apply scaling multipliers
-        // This would typically involve updating notional or interest based on index
-        // For now, just update status date
+        // Scaling: apply scaling multipliers to notional/interest
+        // Note: In a full implementation, this would fetch the index value and
+        // update NotionalScalingMultiplier or InterestScalingMultiplier accordingly.
+        // For this simplified implementation, multipliers are set at contract initialization.
         state.StatusDate = eventDate;
     }
 
