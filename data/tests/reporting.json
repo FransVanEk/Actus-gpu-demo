@@ -1,0 +1,18 @@
+{
+  "name": "StandardReport",
+  "outputs": ["PV", "DV01", "CashflowByMonth"],
+  "group_by": ["scenario", "type"],
+  "time_grid": {
+    "start": "2024-01-01",
+    "end": "2034-12-31",
+    "freq": "M"
+  },
+  "aggregation": {
+    "sum": ["PV"],
+    "mean": ["DV01"]
+  },
+  "export": {
+    "format": "csv",
+    "path": "out/reports/standard"
+  }
+}

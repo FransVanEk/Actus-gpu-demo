@@ -1,0 +1,38 @@
+[
+  {
+    "id": "PAM-001",
+    "type": "PAM",
+    "initialExchangeDate": "2024-01-15",
+    "maturityDate": "2029-01-15",
+    "notionalPrincipal": 1000000.0,
+    "currency": "USD",
+    "nominalInterestRate": 0.045,
+    "dayCountConvention": "Act360",
+    "cycleOfInterestPayment": "P3M",
+    "cycleAnchorDateOfInterestPayment": "2024-04-15"
+  },
+  {
+    "id": "PAM-002",
+    "type": "PAM",
+    "initialExchangeDate": "2024-02-01",
+    "maturityDate": "2027-02-01",
+    "notionalPrincipal": 500000.0,
+    "currency": "EUR",
+    "nominalInterestRate": 0.038,
+    "dayCountConvention": "Act365F",
+    "cycleOfInterestPayment": "P6M",
+    "cycleAnchorDateOfInterestPayment": "2024-08-01"
+  },
+  {
+    "id": "PAM-003",
+    "type": "PAM",
+    "initialExchangeDate": "2024-03-01",
+    "maturityDate": "2034-03-01",
+    "notionalPrincipal": 2000000.0,
+    "currency": "USD",
+    "nominalInterestRate": 0.052,
+    "dayCountConvention": "Thirty360",
+    "cycleOfInterestPayment": "P1Y",
+    "cycleAnchorDateOfInterestPayment": "2025-03-01"
+  }
+]
