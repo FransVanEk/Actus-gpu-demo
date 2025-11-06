@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Windows.Data;
+using System.Globalization;
 using ActusDesk.App.ViewModels;
 using ActusDesk.Gpu;
 using Microsoft.Extensions.Logging;
@@ -60,5 +62,45 @@ public partial class MainWindow : Window
         var aboutWindow = new AboutWindow(_gpuContext);
         aboutWindow.Owner = this;
         aboutWindow.ShowDialog();
+    }
+}
+
+// Converters
+public class InverseBooleanConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is bool boolValue && !boolValue;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is bool boolValue && !boolValue;
+    }
+}
+
+public class InverseBooleanToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is bool boolValue && boolValue ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public class ZeroToCollapsedConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is int intValue && intValue > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
     }
 }
