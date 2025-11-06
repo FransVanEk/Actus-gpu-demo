@@ -8,9 +8,22 @@ namespace ActusDesk.IO;
 
 /// <summary>
 /// Provider interface for loading PAM contracts into GPU memory
+/// Decoupled from contract source - works with any IPamContractSource
 /// </summary>
 public interface IPamGpuProvider
 {
+    /// <summary>
+    /// Load PAM contracts from a source and transfer to GPU
+    /// </summary>
+    /// <param name="source">Contract source (file, mock, composite, etc.)</param>
+    /// <param name="gpuContext">GPU context for memory allocation</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>GPU-ready contract data in SoA format</returns>
+    Task<PamDeviceContracts> LoadToGpuAsync(
+        IPamContractSource source,
+        GpuContext gpuContext,
+        CancellationToken ct = default);
+
     /// <summary>
     /// Load PAM contracts from files in parallel and transfer to GPU
     /// </summary>
@@ -72,7 +85,8 @@ public class PamDeviceContracts : IDisposable
 }
 
 /// <summary>
-/// Implementation of PAM GPU provider with parallel file reading
+/// Implementation of PAM GPU provider with support for any contract source
+/// Decouples contract source from GPU transfer logic
 /// </summary>
 public class PamGpuProvider : IPamGpuProvider
 {
@@ -84,11 +98,29 @@ public class PamGpuProvider : IPamGpuProvider
     }
 
     public async Task<PamDeviceContracts> LoadToGpuAsync(
+        IPamContractSource source,
+        GpuContext gpuContext,
+        CancellationToken ct = default)
+    {
+        _logger?.LogInformation("Loading contracts from source: {SourceType}", source.GetType().Name);
+
+        // Get contracts from the source
+        var contracts = await source.GetContractsAsync(ct);
+        var contractsList = contracts.ToList();
+
+        _logger?.LogInformation("Loaded {ContractCount} contracts from source", contractsList.Count);
+
+        // Transfer to GPU
+        return await TransferToGpuAsync(contractsList, gpuContext, ct);
+    }
+
+    public async Task<PamDeviceContracts> LoadToGpuAsync(
         string filePath,
         GpuContext gpuContext,
         CancellationToken ct = default)
     {
-        return await LoadToGpuAsync(new[] { filePath }, gpuContext, ct);
+        var source = new PamFileSource(filePath);
+        return await LoadToGpuAsync(source, gpuContext, ct);
     }
 
     public async Task<PamDeviceContracts> LoadToGpuAsync(
@@ -96,30 +128,8 @@ public class PamGpuProvider : IPamGpuProvider
         GpuContext gpuContext,
         CancellationToken ct = default)
     {
-        var filePathList = filePaths.ToList();
-        _logger?.LogInformation("Loading {FileCount} files in parallel to GPU", filePathList.Count);
-
-        // Load all files in parallel
-        var loadTasks = filePathList.Select(path => LoadFileAsync(path, ct)).ToList();
-        var allTestCases = await Task.WhenAll(loadTasks);
-
-        // Flatten all test cases from all files
-        var allModels = allTestCases
-            .SelectMany(testCases => testCases.Values)
-            .Select(testCase => ActusPamMapper.MapToPamModel(testCase.Terms))
-            .ToList();
-
-        _logger?.LogInformation("Loaded {ContractCount} contracts from {FileCount} files", 
-            allModels.Count, filePathList.Count);
-
-        // Convert to SoA format and upload to GPU
-        return await TransferToGpuAsync(allModels, gpuContext, ct);
-    }
-
-    private async Task<Dictionary<string, ActusTestCase>> LoadFileAsync(string filePath, CancellationToken ct)
-    {
-        _logger?.LogDebug("Loading file: {FilePath}", filePath);
-        return await ActusPamMapper.LoadTestCasesAsync(filePath, ct);
+        var source = new PamFileSource(filePaths);
+        return await LoadToGpuAsync(source, gpuContext, ct);
     }
 
     private async Task<PamDeviceContracts> TransferToGpuAsync(
