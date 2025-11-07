@@ -24,15 +24,16 @@ public class ContractsServiceIntegrationTests : IDisposable
         // Arrange
         var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Warning));
         var logger = loggerFactory.CreateLogger<ContractsService>();
-        var provider = new PamGpuProvider();
-        var service = new ContractsService(logger, _gpuContext, provider);
+        var pamProvider = new PamGpuProvider();
+        var annProvider = new AnnGpuProvider();
+        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider);
 
         // Act
         await service.LoadFromJsonAsync(new[] { TestFilePath });
 
         // Assert
         Assert.True(service.ContractCount >= 25);
-        var deviceContracts = service.GetDeviceContracts();
+        var deviceContracts = service.GetPamDeviceContracts();
         Assert.NotNull(deviceContracts);
         Assert.NotNull(deviceContracts.NotionalPrincipal);
     }
@@ -43,15 +44,16 @@ public class ContractsServiceIntegrationTests : IDisposable
         // Arrange
         var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Warning));
         var logger = loggerFactory.CreateLogger<ContractsService>();
-        var provider = new PamGpuProvider();
-        var service = new ContractsService(logger, _gpuContext, provider);
+        var pamProvider = new PamGpuProvider();
+        var annProvider = new AnnGpuProvider();
+        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider);
 
         // Act
         await service.LoadMockContractsAsync(1000, seed: 42);
 
         // Assert
-        Assert.Equal(1000, service.ContractCount);
-        var deviceContracts = service.GetDeviceContracts();
+        Assert.Equal(1000, service.PamContractCount);
+        var deviceContracts = service.GetPamDeviceContracts();
         Assert.NotNull(deviceContracts);
         Assert.Equal(1000, deviceContracts.Count);
     }
@@ -62,8 +64,9 @@ public class ContractsServiceIntegrationTests : IDisposable
         // Arrange
         var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Warning));
         var logger = loggerFactory.CreateLogger<ContractsService>();
-        var provider = new PamGpuProvider();
-        var service = new ContractsService(logger, _gpuContext, provider);
+        var pamProvider = new PamGpuProvider();
+        var annProvider = new AnnGpuProvider();
+        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider);
 
         // Create composite source
         var fileSource = new PamFileSource(TestFilePath);
@@ -83,8 +86,9 @@ public class ContractsServiceIntegrationTests : IDisposable
         // Arrange
         var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Warning));
         var logger = loggerFactory.CreateLogger<ContractsService>();
-        var provider = new PamGpuProvider();
-        var service = new ContractsService(logger, _gpuContext, provider);
+        var pamProvider = new PamGpuProvider();
+        var annProvider = new AnnGpuProvider();
+        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider);
 
         // Act - Load multiple times
         await service.LoadMockContractsAsync(100);
@@ -104,8 +108,9 @@ public class ContractsServiceIntegrationTests : IDisposable
         // Arrange
         var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Warning));
         var logger = loggerFactory.CreateLogger<ContractsService>();
-        var provider = new PamGpuProvider();
-        var service = new ContractsService(logger, _gpuContext, provider);
+        var pamProvider = new PamGpuProvider();
+        var annProvider = new AnnGpuProvider();
+        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider);
 
         await service.LoadMockContractsAsync(100);
 
@@ -114,6 +119,25 @@ public class ContractsServiceIntegrationTests : IDisposable
 
         // Assert - No exception should be thrown
         Assert.True(true);
+    }
+
+    [Fact]
+    public async Task ContractsService_LoadMixedContracts_LoadsBothTypes()
+    {
+        // Arrange
+        var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Warning));
+        var logger = loggerFactory.CreateLogger<ContractsService>();
+        var pamProvider = new PamGpuProvider();
+        var annProvider = new AnnGpuProvider();
+        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider);
+
+        // Act
+        await service.LoadMixedMockContractsAsync(pamCount: 500, annCount: 300, seed: 42);
+
+        // Assert
+        Assert.Equal(800, service.ContractCount);
+        Assert.Equal(500, service.PamContractCount);
+        Assert.Equal(300, service.AnnContractCount);
     }
 
     public void Dispose()
