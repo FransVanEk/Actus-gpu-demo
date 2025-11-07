@@ -34,12 +34,15 @@ public class ContractRegistry
     /// <summary>
     /// Update the percentage for a contract type
     /// </summary>
-    public void UpdatePercentage(string code, double percentage)
+    /// <returns>True if the contract type exists and was updated, false otherwise</returns>
+    public bool UpdatePercentage(string code, double percentage)
     {
         if (_contractTypes.TryGetValue(code, out var info))
         {
             _contractTypes[code] = info with { Percentage = percentage };
+            return true;
         }
+        return false;
     }
 
     /// <summary>

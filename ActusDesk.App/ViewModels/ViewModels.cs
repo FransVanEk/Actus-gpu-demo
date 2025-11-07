@@ -64,6 +64,12 @@ public partial class WorkspaceViewModel : ObservableObject
     {
         // Update registry
         _contractsService.ContractRegistry.UpdatePercentage("ANN", value);
+        // Auto-adjust PAM to maintain 100% total
+        var newPamPercentage = 100.0 - value;
+        if (Math.Abs(PamPercentage - newPamPercentage) > 0.01) // Avoid infinite loop
+        {
+            PamPercentage = newPamPercentage;
+        }
     }
 
     private void UpdatePercentagesFromRegistry()

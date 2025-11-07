@@ -124,6 +124,8 @@ public class ContractsService
         _logger.LogInformation("Generated and loaded {Count} mock ANN contracts to GPU", _annDeviceContracts.Count);
     }
 
+    private const int AnnSeedOffset = 1000; // Offset for ANN seed to ensure variety when loading mixed contracts
+
     /// <summary>
     /// Load both PAM and ANN mock contracts based on registry percentages
     /// </summary>
@@ -149,7 +151,7 @@ public class ContractsService
         // Load ANN contracts with different seed to ensure variety
         if (annCount > 0)
         {
-            await LoadMockAnnContractsAsync(annCount, seed.HasValue ? seed.Value + 1000 : null, ct);
+            await LoadMockAnnContractsAsync(annCount, seed.HasValue ? seed.Value + AnnSeedOffset : null, ct);
         }
         
         _logger.LogInformation("Loaded {Total} total contracts ({Pam} PAM + {Ann} ANN) to GPU", 
