@@ -46,6 +46,9 @@ public partial class App : Application
         services.AddSingleton<IPamGpuProvider, PamGpuProvider>();
         services.AddSingleton<IAnnGpuProvider, AnnGpuProvider>();
 
+        // Contract Registry
+        services.AddSingleton<ContractRegistry>();
+
         // Services
         services.AddSingleton<ContractsService>();
         services.AddSingleton<ScenarioService>();

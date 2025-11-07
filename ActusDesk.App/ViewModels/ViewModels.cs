@@ -30,10 +30,53 @@ public partial class WorkspaceViewModel : ObservableObject
     [ObservableProperty]
     private int _annContractCount = 0;
 
+    [ObservableProperty]
+    private int _totalMockContracts = 100000;
+
+    [ObservableProperty]
+    private double _pamPercentage = 50.0;
+
+    [ObservableProperty]
+    private double _annPercentage = 50.0;
+
     public WorkspaceViewModel(ContractsService contractsService, ILogger<WorkspaceViewModel> logger)
     {
         _contractsService = contractsService;
         _logger = logger;
+        
+        // Initialize from registry
+        UpdatePercentagesFromRegistry();
+    }
+
+    partial void OnPamPercentageChanged(double value)
+    {
+        // Update registry
+        _contractsService.ContractRegistry.UpdatePercentage("PAM", value);
+        // Auto-adjust ANN to maintain 100% total
+        var newAnnPercentage = 100.0 - value;
+        if (Math.Abs(AnnPercentage - newAnnPercentage) > 0.01) // Avoid infinite loop
+        {
+            AnnPercentage = newAnnPercentage;
+        }
+    }
+
+    partial void OnAnnPercentageChanged(double value)
+    {
+        // Update registry
+        _contractsService.ContractRegistry.UpdatePercentage("ANN", value);
+    }
+
+    private void UpdatePercentagesFromRegistry()
+    {
+        var normalized = _contractsService.ContractRegistry.GetNormalizedPercentages();
+        if (normalized.TryGetValue("PAM", out var pamPct))
+        {
+            PamPercentage = pamPct;
+        }
+        if (normalized.TryGetValue("ANN", out var annPct))
+        {
+            AnnPercentage = annPct;
+        }
     }
 
     [RelayCommand]
@@ -92,12 +135,13 @@ public partial class WorkspaceViewModel : ObservableObject
         {
             IsLoading = true;
             StatusMessage = "Generating mock contracts...";
-            _logger.LogInformation("Generating mock contracts");
+            _logger.LogInformation("Generating mock contracts with distribution PAM: {PamPct}%, ANN: {AnnPct}%", 
+                PamPercentage, AnnPercentage);
 
-            // Load mixed PAM and ANN contracts
-            await _contractsService.LoadMixedMockContractsAsync(pamCount: 50000, annCount: 50000, seed: 42);
+            // Load mixed PAM and ANN contracts based on registry percentages
+            await _contractsService.LoadMixedMockContractsAsync(TotalMockContracts, seed: 42);
             UpdateContractCounts();
-            StatusMessage = $"Generated {ContractCount} mock contracts successfully (PAM: {PamContractCount}, ANN: {AnnContractCount})";
+            StatusMessage = $"Generated {ContractCount} mock contracts successfully (PAM: {PamContractCount} [{PamPercentage:F1}%], ANN: {AnnContractCount} [{AnnPercentage:F1}%])";
             _logger.LogInformation("Successfully generated {Count} mock contracts", ContractCount);
         }
         catch (Exception ex)

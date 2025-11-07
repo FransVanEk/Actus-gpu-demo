@@ -99,7 +99,53 @@
                                        Command="{Binding LoadContractsCommand}"
                                        IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"/>
                                 
-                                <Button Content="Generate Mock Contracts (50k PAM + 50k ANN)" Margin="10,15,0,0" Padding="20,10"
+                                <Separator Margin="0,20,0,20"/>
+                                
+                                <TextBlock Text="Mock Contract Generator" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Total Contracts:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBox Grid.Column="1" Text="{Binding TotalMockContracts, UpdateSourceTrigger=PropertyChanged}" 
+                                            Width="150" HorizontalAlignment="Left"/>
+                                </Grid>
+                                
+                                <TextBlock Text="Contract Distribution" FontWeight="SemiBold" Margin="0,10,0,5"/>
+                                
+                                <Grid Margin="0,5,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="60"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <TextBlock Text="PAM:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"/>
+                                    <Slider Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="100" 
+                                           Value="{Binding PamPercentage, Mode=TwoWay}" 
+                                           TickFrequency="5" IsSnapToTickEnabled="True"
+                                           Margin="5,0"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" 
+                                              Text="{Binding PamPercentage, StringFormat='{}{0:F0}%'}" 
+                                              VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                    
+                                    <TextBlock Text="ANN:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                                    <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="100" 
+                                           Value="{Binding AnnPercentage, Mode=TwoWay}" 
+                                           TickFrequency="5" IsSnapToTickEnabled="True"
+                                           Margin="5,10,5,0"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="2" 
+                                              Text="{Binding AnnPercentage, StringFormat='{}{0:F0}%'}" 
+                                              VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,10,0,0"/>
+                                </Grid>
+                                
+                                <Button Content="Generate Mock Contracts" Margin="0,15,0,0" Padding="20,10"
                                        Background="{StaticResource AccentBrush}" Foreground="White"
                                        HorizontalAlignment="Left"
                                        Command="{Binding LoadMockContractsCommand}"

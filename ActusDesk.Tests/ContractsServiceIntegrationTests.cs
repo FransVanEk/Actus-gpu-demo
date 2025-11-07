@@ -26,7 +26,8 @@ public class ContractsServiceIntegrationTests : IDisposable
         var logger = loggerFactory.CreateLogger<ContractsService>();
         var pamProvider = new PamGpuProvider();
         var annProvider = new AnnGpuProvider();
-        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider);
+        var registry = new ContractRegistry();
+        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider, registry);
 
         // Act
         await service.LoadFromJsonAsync(new[] { TestFilePath });
@@ -46,7 +47,8 @@ public class ContractsServiceIntegrationTests : IDisposable
         var logger = loggerFactory.CreateLogger<ContractsService>();
         var pamProvider = new PamGpuProvider();
         var annProvider = new AnnGpuProvider();
-        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider);
+        var registry = new ContractRegistry();
+        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider, registry);
 
         // Act
         await service.LoadMockContractsAsync(1000, seed: 42);
@@ -66,7 +68,8 @@ public class ContractsServiceIntegrationTests : IDisposable
         var logger = loggerFactory.CreateLogger<ContractsService>();
         var pamProvider = new PamGpuProvider();
         var annProvider = new AnnGpuProvider();
-        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider);
+        var registry = new ContractRegistry();
+        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider, registry);
 
         // Create composite source
         var fileSource = new PamFileSource(TestFilePath);
@@ -88,7 +91,8 @@ public class ContractsServiceIntegrationTests : IDisposable
         var logger = loggerFactory.CreateLogger<ContractsService>();
         var pamProvider = new PamGpuProvider();
         var annProvider = new AnnGpuProvider();
-        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider);
+        var registry = new ContractRegistry();
+        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider, registry);
 
         // Act - Load multiple times
         await service.LoadMockContractsAsync(100);
@@ -110,7 +114,8 @@ public class ContractsServiceIntegrationTests : IDisposable
         var logger = loggerFactory.CreateLogger<ContractsService>();
         var pamProvider = new PamGpuProvider();
         var annProvider = new AnnGpuProvider();
-        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider);
+        var registry = new ContractRegistry();
+        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider, registry);
 
         await service.LoadMockContractsAsync(100);
 
@@ -129,10 +134,13 @@ public class ContractsServiceIntegrationTests : IDisposable
         var logger = loggerFactory.CreateLogger<ContractsService>();
         var pamProvider = new PamGpuProvider();
         var annProvider = new AnnGpuProvider();
-        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider);
+        var registry = new ContractRegistry();
+        registry.UpdatePercentage("PAM", 62.5); // 500/800
+        registry.UpdatePercentage("ANN", 37.5); // 300/800
+        var service = new ContractsService(logger, _gpuContext, pamProvider, annProvider, registry);
 
         // Act
-        await service.LoadMixedMockContractsAsync(pamCount: 500, annCount: 300, seed: 42);
+        await service.LoadMixedMockContractsAsync(totalContracts: 800, seed: 42);
 
         // Assert
         Assert.Equal(800, service.ContractCount);

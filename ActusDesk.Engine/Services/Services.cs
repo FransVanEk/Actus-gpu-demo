@@ -18,6 +18,7 @@ public class ContractsService
     private readonly GpuContext _gpuContext;
     private readonly IPamGpuProvider _pamGpuProvider;
     private readonly IAnnGpuProvider _annGpuProvider;
+    private readonly ContractRegistry _contractRegistry;
     private PamDeviceContracts? _pamDeviceContracts;
     private AnnDeviceContracts? _annDeviceContracts;
 
@@ -25,17 +26,20 @@ public class ContractsService
         ILogger<ContractsService> logger, 
         GpuContext gpuContext,
         IPamGpuProvider pamGpuProvider,
-        IAnnGpuProvider annGpuProvider)
+        IAnnGpuProvider annGpuProvider,
+        ContractRegistry contractRegistry)
     {
         _logger = logger;
         _gpuContext = gpuContext;
         _pamGpuProvider = pamGpuProvider;
         _annGpuProvider = annGpuProvider;
+        _contractRegistry = contractRegistry;
     }
 
     public int ContractCount => (_pamDeviceContracts?.Count ?? 0) + (_annDeviceContracts?.Count ?? 0);
     public int PamContractCount => _pamDeviceContracts?.Count ?? 0;
     public int AnnContractCount => _annDeviceContracts?.Count ?? 0;
+    public ContractRegistry ContractRegistry => _contractRegistry;
 
     /// <summary>
     /// Load PAM contracts from JSON files and upload to GPU
@@ -121,17 +125,32 @@ public class ContractsService
     }
 
     /// <summary>
-    /// Load both PAM and ANN mock contracts
+    /// Load both PAM and ANN mock contracts based on registry percentages
     /// </summary>
-    public async Task LoadMixedMockContractsAsync(int pamCount, int annCount, int? seed = null, CancellationToken ct = default)
+    public async Task LoadMixedMockContractsAsync(int totalContracts, int? seed = null, CancellationToken ct = default)
     {
-        _logger.LogInformation("Generating {PamCount} PAM and {AnnCount} ANN mock contracts", pamCount, annCount);
+        // Calculate counts based on registry percentages
+        var counts = _contractRegistry.CalculateContractCounts(totalContracts);
+        
+        int pamCount = counts.GetValueOrDefault("PAM", 0);
+        int annCount = counts.GetValueOrDefault("ANN", 0);
+        
+        _logger.LogInformation("Generating {Total} contracts based on registry: PAM={PamCount} ({PamPct:F1}%), ANN={AnnCount} ({AnnPct:F1}%)", 
+            totalContracts, 
+            pamCount, (pamCount * 100.0 / totalContracts),
+            annCount, (annCount * 100.0 / totalContracts));
         
         // Load PAM contracts
-        await LoadMockContractsAsync(pamCount, seed, ct);
+        if (pamCount > 0)
+        {
+            await LoadMockContractsAsync(pamCount, seed, ct);
+        }
         
         // Load ANN contracts with different seed to ensure variety
-        await LoadMockAnnContractsAsync(annCount, seed.HasValue ? seed.Value + 1000 : null, ct);
+        if (annCount > 0)
+        {
+            await LoadMockAnnContractsAsync(annCount, seed.HasValue ? seed.Value + 1000 : null, ct);
+        }
         
         _logger.LogInformation("Loaded {Total} total contracts ({Pam} PAM + {Ann} ANN) to GPU", 
             ContractCount, PamContractCount, AnnContractCount);
