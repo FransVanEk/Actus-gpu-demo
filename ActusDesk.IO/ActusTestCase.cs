@@ -124,6 +124,19 @@ public sealed class ActusTerms
 
     [JsonPropertyName("contractPerformance")]
     public string? ContractPerformance { get; set; }
+
+    // ANN-specific fields
+    [JsonPropertyName("cycleAnchorDateOfPrincipalRedemption")]
+    public string? CycleAnchorDateOfPrincipalRedemption { get; set; }
+
+    [JsonPropertyName("cycleOfPrincipalRedemption")]
+    public string? CycleOfPrincipalRedemption { get; set; }
+
+    [JsonPropertyName("nextPrincipalRedemptionPayment")]
+    public JsonElement? NextPrincipalRedemptionPayment { get; set; }
+
+    [JsonPropertyName("interestCalculationBase")]
+    public string? InterestCalculationBase { get; set; }
 }
 
 /// <summary>
