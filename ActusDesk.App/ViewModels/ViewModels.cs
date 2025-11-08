@@ -219,6 +219,7 @@ public partial class RunConsoleViewModel : ObservableObject
 {
     private readonly ValuationService _valuationService;
     private readonly ILogger<RunConsoleViewModel> _logger;
+    private CancellationTokenSource? _cancellationTokenSource;
 
     [ObservableProperty]
     private string _statusMessage = "Ready to run valuation";
@@ -228,6 +229,12 @@ public partial class RunConsoleViewModel : ObservableObject
 
     [ObservableProperty]
     private string _results = "";
+
+    [ObservableProperty]
+    private double _progressPercentage = 0;
+
+    [ObservableProperty]
+    private string _progressMessage = "";
 
     public RunConsoleViewModel(ValuationService valuationService, ILogger<RunConsoleViewModel> logger)
     {
@@ -241,13 +248,18 @@ public partial class RunConsoleViewModel : ObservableObject
         try
         {
             IsRunning = true;
+            ProgressPercentage = 0;
             StatusMessage = "Running valuation...";
             Results = "Starting valuation run...\n";
             _logger.LogInformation("Starting valuation run");
 
-            var result = await _valuationService.RunValuationAsync();
+            _cancellationTokenSource = new CancellationTokenSource();
+            var progress = new Progress<ValuationProgress>(OnProgressUpdate);
 
-            Results += $"\nValuation Complete!\n";
+            var result = await _valuationService.RunValuationAsync(_cancellationTokenSource.Token, progress);
+
+            Results += $"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+            Results += $"Valuation Complete!\n";
             Results += $"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
             Results += $"Total Contracts: {result.ContractCount:N0}\n";
             Results += $"  - PAM Contracts: {result.PamContractCount:N0}\n";
@@ -257,10 +269,43 @@ public partial class RunConsoleViewModel : ObservableObject
             Results += $"Duration: {result.Duration.TotalMilliseconds:N2}ms\n";
             Results += $"Throughput: {(result.ContractCount * result.ScenarioCount / result.Duration.TotalSeconds):N0} contracts/sec\n";
             Results += $"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+            Results += $"\nEvent Summary:\n";
+            Results += $"Total Event Days: {result.DayEventValues.Count:N0}\n";
+            
+            if (result.DayEventValues.Count > 0)
+            {
+                Results += $"First Event Date: {result.DayEventValues.First().Date}\n";
+                Results += $"Last Event Date: {result.DayEventValues.Last().Date}\n";
+                Results += $"Total Events: {result.DayEventValues.Sum(d => d.Events.Count):N0}\n";
+                Results += $"Total Payoff: {result.DayEventValues.Sum(d => d.TotalPayoff):N2}\n";
+                Results += $"Total PV: {result.DayEventValues.Sum(d => d.TotalPresentValue):N2}\n";
+                
+                // Show sample of first few days with events
+                Results += $"\nSample Event Days (first 5):\n";
+                foreach (var day in result.DayEventValues.Take(5))
+                {
+                    Results += $"  {day.Date}: {day.Events.Count} events, Payoff: {day.TotalPayoff:N2}, PV: {day.TotalPresentValue:N2}\n";
+                }
+                
+                if (result.DayEventValues.Count > 5)
+                {
+                    Results += $"  ... and {result.DayEventValues.Count - 5} more days\n";
+                }
+            }
+            
+            Results += $"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
             Results += $"\n{result.Message}\n";
 
             StatusMessage = "Valuation complete";
+            ProgressPercentage = 100;
+            ProgressMessage = "Complete!";
             _logger.LogInformation("Valuation completed successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            Results += $"\nValuation cancelled by user.\n";
+            StatusMessage = "Valuation cancelled";
+            _logger.LogInformation("Valuation cancelled");
         }
         catch (Exception ex)
         {
@@ -271,6 +316,29 @@ public partial class RunConsoleViewModel : ObservableObject
         finally
         {
             IsRunning = false;
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
         }
+    }
+
+    [RelayCommand]
+    private void CancelValuation()
+    {
+        _cancellationTokenSource?.Cancel();
+        StatusMessage = "Cancelling valuation...";
+        _logger.LogInformation("Cancellation requested");
+    }
+
+    private void OnProgressUpdate(ValuationProgress progress)
+    {
+        ProgressPercentage = progress.PercentComplete;
+        ProgressMessage = progress.Message;
+        StatusMessage = $"{progress.Stage}: {progress.Message}";
+        
+        // Append progress to results
+        Results += $"[{progress.PercentComplete:F1}%] {progress.Message}\n";
+        
+        _logger.LogDebug("Progress: {Stage} - {Message} ({Percent:F1}%)", 
+            progress.Stage, progress.Message, progress.PercentComplete);
     }
 }
