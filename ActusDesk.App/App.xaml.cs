@@ -42,8 +42,12 @@ public partial class App : Application
         // GPU Context (singleton - keep for entire app lifetime)
         services.AddSingleton<GpuContext>();
 
-        // PAM GPU Provider
+        // GPU Providers
         services.AddSingleton<IPamGpuProvider, PamGpuProvider>();
+        services.AddSingleton<IAnnGpuProvider, AnnGpuProvider>();
+
+        // Contract Registry
+        services.AddSingleton<ContractRegistry>();
 
         // Services
         services.AddSingleton<ContractsService>();

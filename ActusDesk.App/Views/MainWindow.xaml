@@ -99,7 +99,53 @@
                                        Command="{Binding LoadContractsCommand}"
                                        IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"/>
                                 
-                                <Button Content="Generate Mock Contracts (100000)" Margin="10,15,0,0" Padding="20,10"
+                                <Separator Margin="0,20,0,20"/>
+                                
+                                <TextBlock Text="Mock Contract Generator" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Total Contracts:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBox Grid.Column="1" Text="{Binding TotalMockContracts, UpdateSourceTrigger=PropertyChanged}" 
+                                            Width="150" HorizontalAlignment="Left"/>
+                                </Grid>
+                                
+                                <TextBlock Text="Contract Distribution" FontWeight="SemiBold" Margin="0,10,0,5"/>
+                                
+                                <Grid Margin="0,5,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="60"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <TextBlock Text="PAM:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"/>
+                                    <Slider Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="100" 
+                                           Value="{Binding PamPercentage, Mode=TwoWay}" 
+                                           TickFrequency="5" IsSnapToTickEnabled="True"
+                                           Margin="5,0"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" 
+                                              Text="{Binding PamPercentage, StringFormat='{}{0:F0}%'}" 
+                                              VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                    
+                                    <TextBlock Text="ANN:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                                    <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="100" 
+                                           Value="{Binding AnnPercentage, Mode=TwoWay}" 
+                                           TickFrequency="5" IsSnapToTickEnabled="True"
+                                           Margin="5,10,5,0"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="2" 
+                                              Text="{Binding AnnPercentage, StringFormat='{}{0:F0}%'}" 
+                                              VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,10,0,0"/>
+                                </Grid>
+                                
+                                <Button Content="Generate Mock Contracts" Margin="0,15,0,0" Padding="20,10"
                                        Background="{StaticResource AccentBrush}" Foreground="White"
                                        HorizontalAlignment="Left"
                                        Command="{Binding LoadMockContractsCommand}"
@@ -112,9 +158,21 @@
                                     </TextBlock>
                                     <TextBlock Text="Loading..." Foreground="Orange" 
                                               Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                    <TextBlock Text="{Binding ContractCount, StringFormat='Contracts loaded: {0}'}" 
-                                              Margin="0,5,0,0" FontWeight="SemiBold"
-                                              Visibility="{Binding ContractCount, Converter={StaticResource ZeroToCollapsedConverter}}"/>
+                                    <StackPanel Visibility="{Binding ContractCount, Converter={StaticResource ZeroToCollapsedConverter}}"
+                                               Margin="0,5,0,0">
+                                        <TextBlock FontWeight="SemiBold">
+                                            <Run Text="Total Contracts: "/>
+                                            <Run Text="{Binding ContractCount, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        <TextBlock Margin="10,2,0,0">
+                                            <Run Text="PAM: "/>
+                                            <Run Text="{Binding PamContractCount, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        <TextBlock Margin="10,2,0,0">
+                                            <Run Text="ANN: "/>
+                                            <Run Text="{Binding AnnContractCount, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </StackPanel>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -142,6 +200,9 @@
             </TabItem>
             
             <TabItem Header="Scenarios">
+                <TabItem.DataContext>
+                    <Binding Path="DataContext.ScenariosViewModel" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                </TabItem.DataContext>
                 <Grid Margin="20">
                     <StackPanel>
                         <TextBlock Text="Scenarios" Style="{StaticResource HeaderStyle}"/>
@@ -151,12 +212,21 @@
                         <Border BorderBrush="LightGray" BorderThickness="1" Padding="15" Margin="0,20,0,0"
                                Background="{StaticResource SurfaceBrush}">
                             <StackPanel>
+                                <Button Content="Load Default Scenarios" Padding="15,8" 
+                                       Background="{StaticResource PrimaryBrush}" Foreground="White"
+                                       HorizontalAlignment="Left" Margin="0,0,0,15"
+                                       Command="{Binding LoadDefaultScenariosCommand}"/>
+                                
                                 <TextBlock Text="Available Scenarios:" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding ScenarioCount, StringFormat='{}{0} scenarios loaded'}" 
+                                          Margin="0,5,0,10" Foreground="Green"
+                                          Visibility="{Binding ScenarioCount, Converter={StaticResource ZeroToCollapsedConverter}}"/>
                                 <ListBox Height="200" Margin="0,10,0,0">
-                                    <ListBoxItem>Base (no shocks)</ListBoxItem>
-                                    <ListBoxItem>Rate +50 bps</ListBoxItem>
-                                    <ListBoxItem>Rate -100 bps</ListBoxItem>
+                                    <ListBoxItem>Base Case (no rate changes)</ListBoxItem>
+                                    <ListBoxItem>Rate +50 bps (parallel bump)</ListBoxItem>
+                                    <ListBoxItem>Rate -50 bps (parallel bump)</ListBoxItem>
                                 </ListBox>
+                                <TextBlock Text="{Binding StatusMessage}" Margin="0,10,0,0" Foreground="Gray"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -184,6 +254,9 @@
             </TabItem>
             
             <TabItem Header="Run Console">
+                <TabItem.DataContext>
+                    <Binding Path="DataContext.RunConsoleViewModel" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                </TabItem.DataContext>
                 <Grid Margin="20">
                     <StackPanel>
                         <TextBlock Text="Run Console" Style="{StaticResource HeaderStyle}"/>
@@ -195,29 +268,18 @@
                             <StackPanel>
                                 <Button Content="▶ Start Valuation" Padding="30,15" FontSize="16" FontWeight="SemiBold"
                                        Background="{StaticResource AccentBrush}" Foreground="White"
-                                       HorizontalAlignment="Left"/>
+                                       HorizontalAlignment="Left"
+                                       Command="{Binding RunValuationCommand}"
+                                       IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}"/>
                                 
-                                <TextBlock Text="Performance Metrics" FontWeight="SemiBold" Margin="0,20,0,10"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    
-                                    <TextBlock Text="GPU Upload:" Grid.Row="0" Grid.Column="0" Margin="0,0,10,5"/>
-                                    <TextBlock Text="N/A" Grid.Row="0" Grid.Column="1" Foreground="Gray"/>
-                                    
-                                    <TextBlock Text="Computation:" Grid.Row="1" Grid.Column="0" Margin="0,0,10,5"/>
-                                    <TextBlock Text="N/A" Grid.Row="1" Grid.Column="1" Foreground="Gray"/>
-                                    
-                                    <TextBlock Text="Throughput:" Grid.Row="2" Grid.Column="0" Margin="0,0,10,5"/>
-                                    <TextBlock Text="N/A" Grid.Row="2" Grid.Column="1" Foreground="Gray"/>
-                                </Grid>
+                                <TextBlock Text="{Binding StatusMessage}" Margin="0,15,0,0" FontWeight="SemiBold" Foreground="Green"/>
+                                
+                                <TextBlock Text="Results" FontWeight="SemiBold" Margin="0,20,0,10"/>
+                                <Border BorderBrush="LightGray" BorderThickness="1" Background="White">
+                                    <ScrollViewer Height="300" VerticalScrollBarVisibility="Auto">
+                                        <TextBlock Text="{Binding Results}" Padding="10" FontFamily="Consolas" FontSize="12"/>
+                                    </ScrollViewer>
+                                </Border>
                             </StackPanel>
                         </Border>
                     </StackPanel>
