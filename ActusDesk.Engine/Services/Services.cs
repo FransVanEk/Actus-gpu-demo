@@ -257,6 +257,9 @@ public class ValuationScenario
 
 /// <summary>
 /// Service for executing valuations on GPU
+/// Follows Single Responsibility Principle - only coordinates valuation execution
+/// Follows Open/Closed Principle - extensible for new contract types via processors
+/// Follows Dependency Inversion - depends on abstractions (IContractProcessor)
 /// </summary>
 public class ValuationService
 {
@@ -264,6 +267,7 @@ public class ValuationService
     private readonly GpuContext _gpuContext;
     private readonly ContractsService _contractsService;
     private readonly ScenarioService _scenarioService;
+    private readonly ContractProcessorRegistry _processorRegistry;
 
     public ValuationService(
         ILogger<ValuationService> logger, 
@@ -275,13 +279,13 @@ public class ValuationService
         _gpuContext = gpuContext;
         _contractsService = contractsService;
         _scenarioService = scenarioService;
+        _processorRegistry = new ContractProcessorRegistry();
     }
 
     public async Task<ValuationResults> RunValuationAsync(
         CancellationToken ct = default,
         IProgress<ValuationProgress>? progress = null)
     {
-        var startTime = DateTime.Now;
         var valuationStart = DateTime.Now;
         var valuationEnd = valuationStart.AddYears(10); // 10 years from now
         
@@ -289,12 +293,11 @@ public class ValuationService
         
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         
-        // Get contracts
-        var pamContracts = _contractsService.GetPamDeviceContracts();
-        var annContracts = _contractsService.GetAnnDeviceContracts();
+        // Initialize processors dynamically
+        InitializeProcessors();
         
-        int totalContracts = (pamContracts?.Count ?? 0) + (annContracts?.Count ?? 0);
-        int scenarioCount = _scenarioService.Scenarios.Count;
+        var activeProcessors = _processorRegistry.GetActiveProcessors().ToList();
+        int totalContracts = _processorRegistry.GetTotalContractCount();
         
         if (totalContracts == 0)
         {
@@ -302,23 +305,15 @@ public class ValuationService
             return new ValuationResults 
             { 
                 ContractCount = 0,
-                ScenarioCount = scenarioCount,
+                ScenarioCount = 0,
                 Duration = stopwatch.Elapsed,
                 Message = "No contracts loaded"
             };
         }
 
-        if (scenarioCount == 0)
-        {
-            _logger.LogWarning("No scenarios loaded");
-            return new ValuationResults 
-            { 
-                ContractCount = totalContracts,
-                ScenarioCount = 0,
-                Duration = stopwatch.Elapsed,
-                Message = "No scenarios loaded"
-            };
-        }
+        // Get scenarios or create default base case
+        var scenarios = GetScenariosOrDefault();
+        int scenarioCount = scenarios.Count;
         
         _logger.LogInformation("Running valuation for {Contracts} contracts across {Scenarios} scenarios", 
             totalContracts, scenarioCount);
@@ -341,7 +336,7 @@ public class ValuationService
         // Process scenarios
         for (int scenarioIdx = 0; scenarioIdx < scenarioCount; scenarioIdx++)
         {
-            var scenario = _scenarioService.Scenarios[scenarioIdx];
+            var scenario = scenarios[scenarioIdx];
             
             progress?.Report(new ValuationProgress
             {
@@ -357,41 +352,26 @@ public class ValuationService
             _logger.LogInformation("Processing scenario {ScenarioIdx}/{Total}: {Name}", 
                 scenarioIdx + 1, scenarioCount, scenario.Name);
 
-            // Calculate rate adjustment based on scenario
-            double rateAdjustment = scenario.RateBumpBps / 10000.0; // Convert basis points to decimal
-            
-            // Process PAM contracts
-            if (pamContracts != null && pamContracts.Count > 0)
+            // Process all active contract processors
+            foreach (var processor in activeProcessors)
             {
-                await ProcessPamContractsAsync(
-                    pamContracts, 
-                    scenarioIdx, 
+                var events = await processor.ProcessAsync(
+                    _gpuContext,
                     scenario,
-                    rateAdjustment,
-                    valuationStart, 
-                    valuationEnd, 
-                    eventsByDate, 
-                    progress, 
-                    totalContracts, 
-                    scenarioCount,
-                    ct);
-            }
-            
-            // Process ANN contracts
-            if (annContracts != null && annContracts.Count > 0)
-            {
-                await ProcessAnnContractsAsync(
-                    annContracts,
-                    scenarioIdx,
-                    scenario,
-                    rateAdjustment,
                     valuationStart,
                     valuationEnd,
-                    eventsByDate,
                     progress,
-                    totalContracts,
-                    scenarioCount,
                     ct);
+
+                // Aggregate events by date
+                foreach (var evt in events)
+                {
+                    if (!eventsByDate.ContainsKey(evt.EventDate))
+                    {
+                        eventsByDate[evt.EventDate] = new List<ContractEvent>();
+                    }
+                    eventsByDate[evt.EventDate].Add(evt);
+                }
             }
             
             // Allow UI to update
@@ -411,18 +391,7 @@ public class ValuationService
             Message = "Aggregating results by day..."
         });
         
-        var dayEventValues = new List<DayEventValue>();
-        foreach (var kvp in eventsByDate.OrderBy(x => x.Key))
-        {
-            var dayValue = new DayEventValue
-            {
-                Date = kvp.Key,
-                Events = kvp.Value,
-                TotalPayoff = kvp.Value.Sum(e => e.Payoff),
-                TotalPresentValue = kvp.Value.Sum(e => e.PresentValue)
-            };
-            dayEventValues.Add(dayValue);
-        }
+        var dayEventValues = AggregateEventsByDay(eventsByDate);
         
         stopwatch.Stop();
         
@@ -437,18 +406,7 @@ public class ValuationService
             Message = "Valuation complete!"
         });
         
-        var results = new ValuationResults
-        {
-            ContractCount = totalContracts,
-            PamContractCount = pamContracts?.Count ?? 0,
-            AnnContractCount = annContracts?.Count ?? 0,
-            ScenarioCount = scenarioCount,
-            Duration = stopwatch.Elapsed,
-            ValuationStartDate = valuationStart,
-            ValuationEndDate = valuationEnd,
-            DayEventValues = dayEventValues,
-            Message = $"Valuation complete: {totalContracts:N0} contracts × {scenarioCount} scenarios in {stopwatch.ElapsedMilliseconds}ms"
-        };
+        var results = BuildResults(totalContracts, scenarioCount, valuationStart, valuationEnd, dayEventValues, stopwatch.Elapsed);
         
         _logger.LogInformation("Valuation completed in {Duration}ms with {EventDays} event days", 
             stopwatch.ElapsedMilliseconds, dayEventValues.Count);
@@ -456,240 +414,113 @@ public class ValuationService
         return results;
     }
 
-    private async Task ProcessPamContractsAsync(
-        PamDeviceContracts pamContracts,
-        int scenarioIdx,
-        ValuationScenario scenario,
-        double rateAdjustment,
-        DateTime valuationStart,
-        DateTime valuationEnd,
-        Dictionary<DateOnly, List<ContractEvent>> eventsByDate,
-        IProgress<ValuationProgress>? progress,
+    /// <summary>
+    /// Initialize contract processors dynamically based on loaded contracts
+    /// Follows Open/Closed Principle - new contract types can be added without modifying this method
+    /// </summary>
+    private void InitializeProcessors()
+    {
+        _processorRegistry.Clear();
+
+        // Register PAM processor if contracts are available
+        var pamContracts = _contractsService.GetPamDeviceContracts();
+        if (pamContracts != null)
+        {
+            var pamLogger = Microsoft.Extensions.Logging.Abstractions.NullLogger<PamContractProcessor>.Instance;
+            _processorRegistry.Register(new PamContractProcessor(pamContracts, pamLogger));
+        }
+
+        // Register ANN processor if contracts are available
+        var annContracts = _contractsService.GetAnnDeviceContracts();
+        if (annContracts != null)
+        {
+            var annLogger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AnnContractProcessor>.Instance;
+            _processorRegistry.Register(new AnnContractProcessor(annContracts, annLogger));
+        }
+
+        // Future contract types can be registered here without modifying existing code
+    }
+
+    /// <summary>
+    /// Get scenarios or create a default base case if none are loaded
+    /// Allows running valuation without explicitly loaded scenarios
+    /// </summary>
+    private List<ValuationScenario> GetScenariosOrDefault()
+    {
+        if (_scenarioService.Scenarios.Count > 0)
+        {
+            return _scenarioService.Scenarios.ToList();
+        }
+
+        // No scenarios loaded, create default base case
+        _logger.LogInformation("No scenarios loaded, using default base case");
+        return new List<ValuationScenario>
+        {
+            new ValuationScenario
+            {
+                Name = "Base Case",
+                Description = "Default scenario with no adjustments",
+                RateBumpBps = 0
+            }
+        };
+    }
+
+    /// <summary>
+    /// Aggregate events by day
+    /// Follows Single Responsibility Principle - separate method for aggregation logic
+    /// </summary>
+    private List<DayEventValue> AggregateEventsByDay(Dictionary<DateOnly, List<ContractEvent>> eventsByDate)
+    {
+        var dayEventValues = new List<DayEventValue>();
+        foreach (var kvp in eventsByDate.OrderBy(x => x.Key))
+        {
+            var dayValue = new DayEventValue
+            {
+                Date = kvp.Key,
+                Events = kvp.Value,
+                TotalPayoff = kvp.Value.Sum(e => e.Payoff),
+                TotalPresentValue = kvp.Value.Sum(e => e.PresentValue)
+            };
+            dayEventValues.Add(dayValue);
+        }
+        return dayEventValues;
+    }
+
+    /// <summary>
+    /// Build valuation results
+    /// Follows Single Responsibility Principle - separate method for result building
+    /// </summary>
+    private ValuationResults BuildResults(
         int totalContracts,
         int scenarioCount,
-        CancellationToken ct)
-    {
-        // For demo purposes, generate sample events for a subset of contracts
-        // In a real implementation, this would use GPU kernels to generate events
-        int sampleSize = Math.Min(pamContracts.Count, 100); // Process up to 100 contracts for demo
-        
-        for (int i = 0; i < sampleSize; i++)
-        {
-            if (i % 10 == 0) // Report progress every 10 contracts
-            {
-                progress?.Report(new ValuationProgress
-                {
-                    Stage = $"Processing PAM Contracts (Scenario: {scenario.Name})",
-                    ProcessedContracts = i,
-                    TotalContracts = totalContracts,
-                    ProcessedScenarios = scenarioIdx,
-                    TotalScenarios = scenarioCount,
-                    PercentComplete = ((scenarioIdx * 100.0) + (i * 100.0 / totalContracts)) / scenarioCount,
-                    Message = $"Processing PAM contract {i + 1}/{sampleSize} in scenario '{scenario.Name}'"
-                });
-                
-                // Allow UI to update
-                await Task.Yield();
-                ct.ThrowIfCancellationRequested();
-            }
-            
-            // Generate sample events for this contract
-            GenerateSamplePamEvents(
-                $"PAM_{i}",
-                valuationStart,
-                valuationEnd,
-                rateAdjustment,
-                eventsByDate);
-        }
-        
-        _logger.LogInformation("Processed {Count} PAM contracts for scenario {Scenario}", 
-            sampleSize, scenario.Name);
-    }
-
-    private async Task ProcessAnnContractsAsync(
-        AnnDeviceContracts annContracts,
-        int scenarioIdx,
-        ValuationScenario scenario,
-        double rateAdjustment,
         DateTime valuationStart,
         DateTime valuationEnd,
-        Dictionary<DateOnly, List<ContractEvent>> eventsByDate,
-        IProgress<ValuationProgress>? progress,
-        int totalContracts,
-        int scenarioCount,
-        CancellationToken ct)
+        List<DayEventValue> dayEventValues,
+        TimeSpan duration)
     {
-        // For demo purposes, generate sample events for a subset of contracts
-        int sampleSize = Math.Min(annContracts.Count, 100); // Process up to 100 contracts for demo
-        
-        for (int i = 0; i < sampleSize; i++)
+        // Get contract counts by type dynamically
+        var contractCounts = new Dictionary<string, int>();
+        foreach (var processor in _processorRegistry.GetAllProcessors())
         {
-            if (i % 10 == 0) // Report progress every 10 contracts
-            {
-                progress?.Report(new ValuationProgress
-                {
-                    Stage = $"Processing ANN Contracts (Scenario: {scenario.Name})",
-                    ProcessedContracts = sampleSize + i,
-                    TotalContracts = totalContracts,
-                    ProcessedScenarios = scenarioIdx,
-                    TotalScenarios = scenarioCount,
-                    PercentComplete = ((scenarioIdx * 100.0) + ((sampleSize + i) * 100.0 / totalContracts)) / scenarioCount,
-                    Message = $"Processing ANN contract {i + 1}/{sampleSize} in scenario '{scenario.Name}'"
-                });
-                
-                // Allow UI to update
-                await Task.Yield();
-                ct.ThrowIfCancellationRequested();
-            }
-            
-            // Generate sample events for this contract
-            GenerateSampleAnnEvents(
-                $"ANN_{i}",
-                valuationStart,
-                valuationEnd,
-                rateAdjustment,
-                eventsByDate);
+            contractCounts[processor.ContractType] = processor.GetContractCount();
         }
-        
-        _logger.LogInformation("Processed {Count} ANN contracts for scenario {Scenario}", 
-            sampleSize, scenario.Name);
+
+        return new ValuationResults
+        {
+            ContractCount = totalContracts,
+            PamContractCount = contractCounts.GetValueOrDefault("PAM", 0),
+            AnnContractCount = contractCounts.GetValueOrDefault("ANN", 0),
+            ScenarioCount = scenarioCount,
+            Duration = duration,
+            ValuationStartDate = valuationStart,
+            ValuationEndDate = valuationEnd,
+            DayEventValues = dayEventValues,
+            ContractCountsByType = contractCounts,
+            Message = $"Valuation complete: {totalContracts:N0} contracts × {scenarioCount} scenarios in {duration.TotalMilliseconds}ms"
+        };
     }
 
-    private void GenerateSamplePamEvents(
-        string contractId,
-        DateTime valuationStart,
-        DateTime valuationEnd,
-        double rateAdjustment,
-        Dictionary<DateOnly, List<ContractEvent>> eventsByDate)
-    {
-        var random = new Random(contractId.GetHashCode());
-        double notional = 100000 + random.NextDouble() * 900000; // 100k to 1M
-        double rate = 0.05 + rateAdjustment; // 5% base rate + scenario adjustment
-        
-        // IED - Initial Exchange
-        var iedDate = DateOnly.FromDateTime(valuationStart);
-        AddEvent(eventsByDate, iedDate, new ContractEvent
-        {
-            ContractId = contractId,
-            ContractType = "PAM",
-            EventType = "IED",
-            Payoff = -(decimal)notional,
-            PresentValue = -(decimal)notional,
-            Currency = "USD"
-        });
-        
-        // IP - Interest Payments (quarterly)
-        var currentDate = valuationStart.AddMonths(3);
-        while (currentDate <= valuationEnd)
-        {
-            double interest = notional * rate * 0.25; // Quarterly interest
-            double discountFactor = Math.Pow(1 + rate, -((currentDate - valuationStart).TotalDays / 365.0));
-            
-            AddEvent(eventsByDate, DateOnly.FromDateTime(currentDate), new ContractEvent
-            {
-                ContractId = contractId,
-                ContractType = "PAM",
-                EventType = "IP",
-                Payoff = (decimal)interest,
-                PresentValue = (decimal)(interest * discountFactor),
-                Currency = "USD"
-            });
-            
-            currentDate = currentDate.AddMonths(3);
-        }
-        
-        // MD - Maturity (principal repayment)
-        var mdDate = DateOnly.FromDateTime(valuationEnd);
-        double mdDiscountFactor = Math.Pow(1 + rate, -((valuationEnd - valuationStart).TotalDays / 365.0));
-        AddEvent(eventsByDate, mdDate, new ContractEvent
-        {
-            ContractId = contractId,
-            ContractType = "PAM",
-            EventType = "MD",
-            Payoff = (decimal)notional,
-            PresentValue = (decimal)(notional * mdDiscountFactor),
-            Currency = "USD"
-        });
-    }
 
-    private void GenerateSampleAnnEvents(
-        string contractId,
-        DateTime valuationStart,
-        DateTime valuationEnd,
-        double rateAdjustment,
-        Dictionary<DateOnly, List<ContractEvent>> eventsByDate)
-    {
-        var random = new Random(contractId.GetHashCode());
-        double notional = 50000 + random.NextDouble() * 450000; // 50k to 500k
-        double rate = 0.04 + rateAdjustment; // 4% base rate + scenario adjustment
-        int periods = 40; // 10 years quarterly
-        
-        // Calculate annuity payment
-        double payment = notional * (rate / 4) / (1 - Math.Pow(1 + rate / 4, -periods));
-        
-        // IED - Initial Exchange
-        var iedDate = DateOnly.FromDateTime(valuationStart);
-        AddEvent(eventsByDate, iedDate, new ContractEvent
-        {
-            ContractId = contractId,
-            ContractType = "ANN",
-            EventType = "IED",
-            Payoff = -(decimal)notional,
-            PresentValue = -(decimal)notional,
-            Currency = "USD"
-        });
-        
-        // PR - Principal Redemption and IP - Interest Payment (combined in annuity)
-        var currentDate = valuationStart.AddMonths(3);
-        double remainingPrincipal = notional;
-        int period = 1;
-        
-        while (currentDate <= valuationEnd && period <= periods)
-        {
-            double interest = remainingPrincipal * (rate / 4);
-            double principal = payment - interest;
-            remainingPrincipal -= principal;
-            
-            double discountFactor = Math.Pow(1 + rate, -((currentDate - valuationStart).TotalDays / 365.0));
-            
-            // Interest payment event
-            AddEvent(eventsByDate, DateOnly.FromDateTime(currentDate), new ContractEvent
-            {
-                ContractId = contractId,
-                ContractType = "ANN",
-                EventType = "IP",
-                Payoff = (decimal)interest,
-                PresentValue = (decimal)(interest * discountFactor),
-                Currency = "USD"
-            });
-            
-            // Principal redemption event
-            AddEvent(eventsByDate, DateOnly.FromDateTime(currentDate), new ContractEvent
-            {
-                ContractId = contractId,
-                ContractType = "ANN",
-                EventType = "PR",
-                Payoff = (decimal)principal,
-                PresentValue = (decimal)(principal * discountFactor),
-                Currency = "USD"
-            });
-            
-            currentDate = currentDate.AddMonths(3);
-            period++;
-        }
-    }
-
-    private void AddEvent(
-        Dictionary<DateOnly, List<ContractEvent>> eventsByDate,
-        DateOnly date,
-        ContractEvent contractEvent)
-    {
-        if (!eventsByDate.ContainsKey(date))
-        {
-            eventsByDate[date] = new List<ContractEvent>();
-        }
-        eventsByDate[date].Add(contractEvent);
-    }
 }
 
 /// <summary>
@@ -725,6 +556,7 @@ public class ValuationResults
     public DateTime ValuationEndDate { get; set; }
     public string Message { get; set; } = "";
     public List<DayEventValue> DayEventValues { get; set; } = new();
+    public Dictionary<string, int> ContractCountsByType { get; set; } = new();
 }
 
 /// <summary>
@@ -746,6 +578,7 @@ public class ContractEvent
     public string ContractId { get; set; } = "";
     public string ContractType { get; set; } = "";
     public string EventType { get; set; } = "";
+    public DateOnly EventDate { get; set; }
     public decimal Payoff { get; set; }
     public decimal PresentValue { get; set; }
     public string Currency { get; set; } = "";
