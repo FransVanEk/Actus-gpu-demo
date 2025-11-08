@@ -43,10 +43,11 @@ public abstract class BaseContractProcessor : IContractProcessor
     protected async Task<List<ContractEvent>> GenerateEventsWithProgressAsync(
         int contractCount,
         string contractType,
+        string scenarioName,
         DateTime valuationStart,
         DateTime valuationEnd,
         double rateAdjustment,
-        Func<string, DateTime, DateTime, double, ContractEvent[]> eventGenerator,
+        Func<string, string, DateTime, DateTime, double, ContractEvent[]> eventGenerator,
         IProgress<ValuationProgress>? progress,
         CancellationToken ct)
     {
@@ -72,7 +73,7 @@ public abstract class BaseContractProcessor : IContractProcessor
 
             // Generate events for this contract
             var contractId = $"{contractType}_{i}";
-            var contractEvents = eventGenerator(contractId, valuationStart, valuationEnd, rateAdjustment);
+            var contractEvents = eventGenerator(contractId, scenarioName, valuationStart, valuationEnd, rateAdjustment);
             events.AddRange(contractEvents);
         }
 
@@ -117,6 +118,7 @@ public class PamContractProcessor : BaseContractProcessor
         return await GenerateEventsWithProgressAsync(
             _contracts.Count,
             ContractType,
+            scenario.Name,
             valuationStart,
             valuationEnd,
             rateAdjustment,
@@ -127,6 +129,7 @@ public class PamContractProcessor : BaseContractProcessor
 
     private ContractEvent[] GeneratePamEvents(
         string contractId,
+        string scenarioName,
         DateTime valuationStart,
         DateTime valuationEnd,
         double rateAdjustment)
@@ -140,6 +143,7 @@ public class PamContractProcessor : BaseContractProcessor
         var iedDate = DateOnly.FromDateTime(valuationStart);
         events.Add(new ContractEvent
         {
+            ScenarioName = scenarioName,
             ContractId = contractId,
             ContractType = "PAM",
             EventType = "IED",
@@ -158,6 +162,7 @@ public class PamContractProcessor : BaseContractProcessor
 
             events.Add(new ContractEvent
             {
+                ScenarioName = scenarioName,
                 ContractId = contractId,
                 ContractType = "PAM",
                 EventType = "IP",
@@ -175,6 +180,7 @@ public class PamContractProcessor : BaseContractProcessor
         double mdDiscountFactor = Math.Pow(1 + rate, -((valuationEnd - valuationStart).TotalDays / 365.0));
         events.Add(new ContractEvent
         {
+            ScenarioName = scenarioName,
             ContractId = contractId,
             ContractType = "PAM",
             EventType = "MD",
@@ -224,6 +230,7 @@ public class AnnContractProcessor : BaseContractProcessor
         return await GenerateEventsWithProgressAsync(
             _contracts.Count,
             ContractType,
+            scenario.Name,
             valuationStart,
             valuationEnd,
             rateAdjustment,
@@ -234,6 +241,7 @@ public class AnnContractProcessor : BaseContractProcessor
 
     private ContractEvent[] GenerateAnnEvents(
         string contractId,
+        string scenarioName,
         DateTime valuationStart,
         DateTime valuationEnd,
         double rateAdjustment)
@@ -251,6 +259,7 @@ public class AnnContractProcessor : BaseContractProcessor
         var iedDate = DateOnly.FromDateTime(valuationStart);
         events.Add(new ContractEvent
         {
+            ScenarioName = scenarioName,
             ContractId = contractId,
             ContractType = "ANN",
             EventType = "IED",
@@ -276,6 +285,7 @@ public class AnnContractProcessor : BaseContractProcessor
             // Interest payment event
             events.Add(new ContractEvent
             {
+                ScenarioName = scenarioName,
                 ContractId = contractId,
                 ContractType = "ANN",
                 EventType = "IP",
@@ -288,6 +298,7 @@ public class AnnContractProcessor : BaseContractProcessor
             // Principal redemption event
             events.Add(new ContractEvent
             {
+                ScenarioName = scenarioName,
                 ContractId = contractId,
                 ContractType = "ANN",
                 EventType = "PR",

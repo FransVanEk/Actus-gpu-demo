@@ -219,6 +219,7 @@ public partial class RunConsoleViewModel : ObservableObject
 {
     private readonly ValuationService _valuationService;
     private readonly ILogger<RunConsoleViewModel> _logger;
+    private readonly CsvValuationOutputHandler _csvOutputHandler;
     private CancellationTokenSource? _cancellationTokenSource;
 
     [ObservableProperty]
@@ -236,10 +237,20 @@ public partial class RunConsoleViewModel : ObservableObject
     [ObservableProperty]
     private string _progressMessage = "";
 
+    [ObservableProperty]
+    private int _valuationYears = 10;
+
+    [ObservableProperty]
+    private bool _exportToCsv = false;
+
+    [ObservableProperty]
+    private string _csvOutputPath = "valuation_results.csv";
+
     public RunConsoleViewModel(ValuationService valuationService, ILogger<RunConsoleViewModel> logger)
     {
         _valuationService = valuationService;
         _logger = logger;
+        _csvOutputHandler = new CsvValuationOutputHandler(LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<CsvValuationOutputHandler>());
     }
 
     [RelayCommand]
@@ -256,7 +267,7 @@ public partial class RunConsoleViewModel : ObservableObject
             _cancellationTokenSource = new CancellationTokenSource();
             var progress = new Progress<ValuationProgress>(OnProgressUpdate);
 
-            var result = await _valuationService.RunValuationAsync(_cancellationTokenSource.Token, progress);
+            var result = await _valuationService.RunValuationAsync(ValuationYears, _cancellationTokenSource.Token, progress);
 
             Results += $"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
             Results += $"Valuation Complete!\n";
@@ -295,6 +306,23 @@ public partial class RunConsoleViewModel : ObservableObject
             
             Results += $"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
             Results += $"\n{result.Message}\n";
+
+            // Export to CSV if requested
+            if (ExportToCsv && !string.IsNullOrWhiteSpace(CsvOutputPath))
+            {
+                try
+                {
+                    Results += $"\nExporting to CSV: {CsvOutputPath}...\n";
+                    await _csvOutputHandler.WriteAsync(result, CsvOutputPath, _cancellationTokenSource.Token);
+                    Results += $"Successfully exported results to CSV!\n";
+                    _logger.LogInformation("Exported results to CSV: {Path}", CsvOutputPath);
+                }
+                catch (Exception csvEx)
+                {
+                    Results += $"Error exporting to CSV: {csvEx.Message}\n";
+                    _logger.LogError(csvEx, "Error exporting to CSV");
+                }
+            }
 
             StatusMessage = "Valuation complete";
             ProgressPercentage = 100;

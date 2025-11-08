@@ -283,11 +283,12 @@ public class ValuationService
     }
 
     public async Task<ValuationResults> RunValuationAsync(
+        int valuationYears = 10,
         CancellationToken ct = default,
         IProgress<ValuationProgress>? progress = null)
     {
         var valuationStart = DateTime.Now;
-        var valuationEnd = valuationStart.AddYears(10); // 10 years from now
+        var valuationEnd = valuationStart.AddYears(valuationYears);
         
         _logger.LogInformation("Starting valuation run from {Start} to {End}", valuationStart, valuationEnd);
         
@@ -575,6 +576,7 @@ public class DayEventValue
 /// </summary>
 public class ContractEvent
 {
+    public string ScenarioName { get; set; } = "";
     public string ContractId { get; set; } = "";
     public string ContractType { get; set; } = "";
     public string EventType { get; set; } = "";

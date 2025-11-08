@@ -266,6 +266,39 @@
                         <Border BorderBrush="LightGray" BorderThickness="1" Padding="15" Margin="0,20,0,0"
                                Background="{StaticResource SurfaceBrush}">
                             <StackPanel>
+                                <TextBlock Text="Valuation Settings" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                
+                                <Grid Margin="0,0,0,15">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <TextBlock Text="Valuation Period (Years):" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ValuationYears, UpdateSourceTrigger=PropertyChanged}" 
+                                            Width="100" HorizontalAlignment="Left"/>
+                                    
+                                    <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" 
+                                             Content="Export results to CSV" 
+                                             IsChecked="{Binding ExportToCsv}" 
+                                             Margin="0,10,0,5"/>
+                                    
+                                    <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="20,0,0,0"
+                                         Visibility="{Binding ExportToCsv, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="CSV Path:" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBox Grid.Column="1" Text="{Binding CsvOutputPath, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </Grid>
+                                </Grid>
+                                
                                 <Button Content="▶ Start Valuation" Padding="30,15" FontSize="16" FontWeight="SemiBold"
                                        Background="{StaticResource AccentBrush}" Foreground="White"
                                        HorizontalAlignment="Left"
@@ -276,7 +309,7 @@
                                 
                                 <TextBlock Text="Results" FontWeight="SemiBold" Margin="0,20,0,10"/>
                                 <Border BorderBrush="LightGray" BorderThickness="1" Background="White">
-                                    <ScrollViewer Height="300" VerticalScrollBarVisibility="Auto">
+                                    <ScrollViewer Height="250" VerticalScrollBarVisibility="Auto">
                                         <TextBlock Text="{Binding Results}" Padding="10" FontFamily="Consolas" FontSize="12"/>
                                     </ScrollViewer>
                                 </Border>

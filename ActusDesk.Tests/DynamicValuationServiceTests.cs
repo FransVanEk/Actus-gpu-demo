@@ -59,7 +59,7 @@ public class DynamicValuationServiceTests : IDisposable
         await contractsService.LoadMockContractsAsync(20);
 
         // Act - Run without scenarios
-        var result = await valuationService.RunValuationAsync();
+        var result = await valuationService.RunValuationAsync(10);
 
         // Assert
         Assert.NotNull(result);
@@ -98,7 +98,7 @@ public class DynamicValuationServiceTests : IDisposable
         await contractsService.LoadMockContractsAsync(30);
 
         // Act
-        var result = await valuationService.RunValuationAsync();
+        var result = await valuationService.RunValuationAsync(10);
 
         // Assert
         Assert.NotNull(result);
@@ -139,7 +139,7 @@ public class DynamicValuationServiceTests : IDisposable
         await contractsService.LoadMockAnnContractsAsync(25);
 
         // Act
-        var result = await valuationService.RunValuationAsync();
+        var result = await valuationService.RunValuationAsync(10);
 
         // Assert
         Assert.NotNull(result);
@@ -183,7 +183,7 @@ public class DynamicValuationServiceTests : IDisposable
         await contractsService.LoadMixedMockContractsAsync(100, seed: 42);
 
         // Act
-        var result = await valuationService.RunValuationAsync();
+        var result = await valuationService.RunValuationAsync(10);
 
         // Assert
         Assert.NotNull(result);
@@ -230,7 +230,7 @@ public class DynamicValuationServiceTests : IDisposable
         await contractsService.LoadMockContractsAsync(15);
 
         // Act
-        var result = await valuationService.RunValuationAsync();
+        var result = await valuationService.RunValuationAsync(10);
 
         // Assert
         Assert.NotNull(result);
@@ -266,7 +266,7 @@ public class DynamicValuationServiceTests : IDisposable
         await contractsService.LoadMixedMockContractsAsync(50);
 
         // Act
-        var result = await valuationService.RunValuationAsync();
+        var result = await valuationService.RunValuationAsync(10);
 
         // Assert - verify dynamic result structure
         Assert.NotNull(result.ContractCountsByType);
@@ -311,7 +311,7 @@ public class DynamicValuationServiceTests : IDisposable
         await contractsService.LoadMockContractsAsync(10);
 
         // Act
-        var result = await valuationService.RunValuationAsync();
+        var result = await valuationService.RunValuationAsync(10);
 
         // Assert - verify event structure
         Assert.NotNull(result.DayEventValues);
