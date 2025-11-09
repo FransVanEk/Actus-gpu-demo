@@ -292,7 +292,11 @@ public class PortfolioService
 
         if (maturities.Count > 0)
         {
-            stats.Economics.AverageMaturityDate = new DateTime((long)maturities.Average(d => d.Ticks));
+            // Calculate average maturity safely to avoid overflow
+            var minTicks = maturities.Min().Ticks;
+            var maxTicks = maturities.Max().Ticks;
+            var avgTicks = minTicks + (long)((maxTicks - minTicks) / 2.0);
+            stats.Economics.AverageMaturityDate = new DateTime(avgTicks);
             stats.Economics.MinMaturityDate = maturities.Min();
             stats.Economics.MaxMaturityDate = maturities.Max();
         }
@@ -394,7 +398,11 @@ public class PortfolioService
 
         if (maturities.Count > 0)
         {
-            stats.Economics.AverageMaturityDate = new DateTime((long)maturities.Average(d => d.Ticks));
+            // Calculate average maturity safely to avoid overflow
+            var minTicks = maturities.Min().Ticks;
+            var maxTicks = maturities.Max().Ticks;
+            var avgTicks = minTicks + (long)((maxTicks - minTicks) / 2.0);
+            stats.Economics.AverageMaturityDate = new DateTime(avgTicks);
             stats.Economics.MinMaturityDate = maturities.Min();
             stats.Economics.MaxMaturityDate = maturities.Max();
         }
