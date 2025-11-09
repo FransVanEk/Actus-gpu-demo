@@ -54,6 +54,7 @@ public partial class App : Application
         services.AddSingleton<ScenarioService>();
         services.AddSingleton<ValuationService>();
         services.AddSingleton<ReportingService>();
+        services.AddSingleton<PortfolioService>();
 
         // IO
         services.AddSingleton<IContractLoader, JsonContractLoader>();

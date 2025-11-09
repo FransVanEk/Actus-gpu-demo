@@ -171,6 +171,266 @@ public partial class WorkspaceViewModel : ObservableObject
 
 public partial class PortfolioViewModel : ObservableObject
 {
+    private readonly PortfolioService _portfolioService;
+    private readonly ContractsService _contractsService;
+    private readonly ILogger<PortfolioViewModel> _logger;
+
+    [ObservableProperty]
+    private bool _hasContracts = false;
+
+    [ObservableProperty]
+    private int _totalContracts = 0;
+
+    [ObservableProperty]
+    private string _totalNotional = "$0";
+
+    [ObservableProperty]
+    private string _minNotional = "$0";
+
+    [ObservableProperty]
+    private string _maxNotional = "$0";
+
+    [ObservableProperty]
+    private string _averageNotional = "$0";
+
+    [ObservableProperty]
+    private string _medianNotional = "N/A";
+
+    [ObservableProperty]
+    private int _distinctContractTypes = 0;
+
+    [ObservableProperty]
+    private string _topCurrencies = "";
+
+    [ObservableProperty]
+    private string _valuationCoverage = "0%";
+
+    [ObservableProperty]
+    private int _readyCount = 0;
+
+    [ObservableProperty]
+    private int _incompleteCount = 0;
+
+    [ObservableProperty]
+    private int _unsupportedCount = 0;
+
+    [ObservableProperty]
+    private string _readinessPercentage = "0%";
+
+    // PAM statistics
+    [ObservableProperty]
+    private int _pamCount = 0;
+
+    [ObservableProperty]
+    private string _pamPercentage = "0%";
+
+    [ObservableProperty]
+    private string _pamTotalNotional = "$0";
+
+    [ObservableProperty]
+    private string _pamAverageNotional = "$0";
+
+    [ObservableProperty]
+    private string _pamMinNotional = "$0";
+
+    [ObservableProperty]
+    private string _pamMaxNotional = "$0";
+
+    [ObservableProperty]
+    private string _pamAverageRate = "N/A";
+
+    [ObservableProperty]
+    private string _pamMaturityRange = "N/A";
+
+    [ObservableProperty]
+    private int _pamReadyCount = 0;
+
+    [ObservableProperty]
+    private string _pamReadyPercentage = "0%";
+
+    [ObservableProperty]
+    private int _pamIncompleteCount = 0;
+
+    [ObservableProperty]
+    private string _pamDataQuality = "";
+
+    // ANN statistics
+    [ObservableProperty]
+    private int _annCount = 0;
+
+    [ObservableProperty]
+    private string _annPercentage = "0%";
+
+    [ObservableProperty]
+    private string _annTotalNotional = "$0";
+
+    [ObservableProperty]
+    private string _annAverageNotional = "$0";
+
+    [ObservableProperty]
+    private string _annMinNotional = "$0";
+
+    [ObservableProperty]
+    private string _annMaxNotional = "$0";
+
+    [ObservableProperty]
+    private string _annAverageRate = "N/A";
+
+    [ObservableProperty]
+    private string _annMaturityRange = "N/A";
+
+    [ObservableProperty]
+    private int _annReadyCount = 0;
+
+    [ObservableProperty]
+    private string _annReadyPercentage = "0%";
+
+    [ObservableProperty]
+    private int _annIncompleteCount = 0;
+
+    [ObservableProperty]
+    private string _annDataQuality = "";
+
+    public PortfolioViewModel(
+        PortfolioService portfolioService,
+        ContractsService contractsService,
+        ILogger<PortfolioViewModel> logger)
+    {
+        _portfolioService = portfolioService;
+        _contractsService = contractsService;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Refresh portfolio statistics from loaded contracts
+    /// Called when contracts are loaded or changed
+    /// </summary>
+    [RelayCommand]
+    public void RefreshStatistics()
+    {
+        try
+        {
+            _logger.LogInformation("Refreshing portfolio statistics");
+
+            var stats = _portfolioService.ComputeStatistics();
+
+            // Check if we have contracts
+            HasContracts = stats.Summary.TotalContracts > 0;
+
+            if (!HasContracts)
+            {
+                _logger.LogInformation("No contracts loaded");
+                return;
+            }
+
+            // Portfolio-level summary
+            TotalContracts = stats.Summary.TotalContracts;
+            TotalNotional = FormatCurrency(stats.Summary.TotalNotional);
+            MinNotional = FormatCurrency(stats.Summary.MinNotional);
+            MaxNotional = FormatCurrency(stats.Summary.MaxNotional);
+            AverageNotional = FormatCurrency(stats.Summary.AverageNotional);
+            MedianNotional = stats.Summary.MedianNotional.HasValue 
+                ? FormatCurrency(stats.Summary.MedianNotional.Value) 
+                : "N/A";
+            
+            DistinctContractTypes = stats.Summary.ContractTypeCounts.Count;
+            
+            TopCurrencies = string.Join(", ", stats.Summary.TopCurrencies.Select(c => 
+                $"{c.Currency} ({c.Count}, {c.Percentage:F1}%)"));
+            
+            ValuationCoverage = $"{stats.Summary.ValuationCoverage:F1}%";
+
+            // Overall readiness
+            ReadyCount = stats.Readiness.ReadyCount;
+            IncompleteCount = stats.Readiness.IncompleteCount;
+            UnsupportedCount = stats.Readiness.UnsupportedCount;
+            ReadinessPercentage = $"{stats.Readiness.ReadinessPercentage:F1}%";
+
+            // PAM statistics
+            if (stats.TypeStatistics.TryGetValue("PAM", out var pamStats))
+            {
+                PamCount = pamStats.Count;
+                PamPercentage = $"{pamStats.PortfolioPercentage:F1}%";
+                PamTotalNotional = FormatCurrency(pamStats.Economics.TotalNotional);
+                PamAverageNotional = FormatCurrency(pamStats.Economics.AverageNotional);
+                PamMinNotional = FormatCurrency(pamStats.Economics.MinNotional);
+                PamMaxNotional = FormatCurrency(pamStats.Economics.MaxNotional);
+                PamAverageRate = pamStats.Economics.WeightedAverageRate.HasValue
+                    ? $"{pamStats.Economics.WeightedAverageRate.Value:F2}%"
+                    : "N/A";
+                PamMaturityRange = FormatDateRange(pamStats.Economics.MinMaturityDate, pamStats.Economics.MaxMaturityDate);
+                PamReadyCount = pamStats.Readiness.ReadyCount;
+                PamReadyPercentage = $"{pamStats.Readiness.ReadyPercentage:F1}%";
+                PamIncompleteCount = pamStats.Readiness.IncompleteCount;
+                PamDataQuality = FormatDataQuality(pamStats.Quality);
+            }
+
+            // ANN statistics
+            if (stats.TypeStatistics.TryGetValue("ANN", out var annStats))
+            {
+                AnnCount = annStats.Count;
+                AnnPercentage = $"{annStats.PortfolioPercentage:F1}%";
+                AnnTotalNotional = FormatCurrency(annStats.Economics.TotalNotional);
+                AnnAverageNotional = FormatCurrency(annStats.Economics.AverageNotional);
+                AnnMinNotional = FormatCurrency(annStats.Economics.MinNotional);
+                AnnMaxNotional = FormatCurrency(annStats.Economics.MaxNotional);
+                AnnAverageRate = annStats.Economics.WeightedAverageRate.HasValue
+                    ? $"{annStats.Economics.WeightedAverageRate.Value:F2}%"
+                    : "N/A";
+                AnnMaturityRange = FormatDateRange(annStats.Economics.MinMaturityDate, annStats.Economics.MaxMaturityDate);
+                AnnReadyCount = annStats.Readiness.ReadyCount;
+                AnnReadyPercentage = $"{annStats.Readiness.ReadyPercentage:F1}%";
+                AnnIncompleteCount = annStats.Readiness.IncompleteCount;
+                AnnDataQuality = FormatDataQuality(annStats.Quality);
+            }
+
+            _logger.LogInformation("Portfolio statistics refreshed: {Total} contracts", TotalContracts);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing portfolio statistics");
+        }
+    }
+
+    private string FormatCurrency(decimal amount)
+    {
+        if (amount >= 1_000_000_000)
+            return $"${amount / 1_000_000_000:F2}B";
+        else if (amount >= 1_000_000)
+            return $"${amount / 1_000_000:F2}M";
+        else if (amount >= 1_000)
+            return $"${amount / 1_000:F2}K";
+        else
+            return $"${amount:F2}";
+    }
+
+    private string FormatDateRange(DateTime? minDate, DateTime? maxDate)
+    {
+        if (!minDate.HasValue || !maxDate.HasValue)
+            return "N/A";
+        
+        return $"{minDate.Value:yyyy-MM-dd} to {maxDate.Value:yyyy-MM-dd}";
+    }
+
+    private string FormatDataQuality(ActusDesk.Engine.Models.DataQuality quality)
+    {
+        var issues = new List<string>();
+        
+        if (quality.MissingMaturityCount > 0)
+            issues.Add($"Missing maturity: {quality.MissingMaturityCount}");
+        if (quality.MissingNotionalCount > 0)
+            issues.Add($"Missing notional: {quality.MissingNotionalCount}");
+        if (quality.MissingRateCount > 0)
+            issues.Add($"Missing rate: {quality.MissingRateCount}");
+        if (quality.MissingCurrencyCount > 0)
+            issues.Add($"Missing currency: {quality.MissingCurrencyCount}");
+        if (quality.MissingStartDateCount > 0)
+            issues.Add($"Missing start date: {quality.MissingStartDateCount}");
+        if (quality.InconsistentCount > 0)
+            issues.Add($"Inconsistent: {quality.InconsistentCount}");
+        
+        return issues.Count > 0 ? string.Join(", ", issues) : "No issues";
+    }
 }
 
 public partial class ScenariosViewModel : ObservableObject
