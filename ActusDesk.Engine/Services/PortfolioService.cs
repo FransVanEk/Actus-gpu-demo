@@ -71,15 +71,12 @@ public class PortfolioService
     /// </summary>
     private List<PamContractModel> GetPamContracts()
     {
-        // Note: In production, this would access the actual contract data
-        // For now, we'll generate mock data based on loaded contract counts
-        var deviceContracts = _contractsService.GetPamDeviceContracts();
-        if (deviceContracts == null)
+        // Get actual source contracts (no mock data)
+        var sourceContracts = _contractsService.GetPamSourceContracts();
+        if (sourceContracts == null || sourceContracts.Count == 0)
             return new List<PamContractModel>();
 
-        // Generate mock contracts matching the count
-        // In real implementation, this would retrieve actual contract data
-        return GenerateMockPamContracts(deviceContracts.Count);
+        return sourceContracts.ToList();
     }
 
     /// <summary>
@@ -87,66 +84,15 @@ public class PortfolioService
     /// </summary>
     private List<AnnContractModel> GetAnnContracts()
     {
-        var deviceContracts = _contractsService.GetAnnDeviceContracts();
-        if (deviceContracts == null)
+        // Get actual source contracts (no mock data)
+        var sourceContracts = _contractsService.GetAnnSourceContracts();
+        if (sourceContracts == null || sourceContracts.Count == 0)
             return new List<AnnContractModel>();
 
-        return GenerateMockAnnContracts(deviceContracts.Count);
+        return sourceContracts.ToList();
     }
 
-    /// <summary>
-    /// Generate mock PAM contracts for statistics
-    /// In production, this would retrieve actual contract data from GPU or cache
-    /// </summary>
-    private List<PamContractModel> GenerateMockPamContracts(int count)
-    {
-        var random = new Random(42);
-        var contracts = new List<PamContractModel>();
-        var currencies = new[] { "USD", "EUR", "GBP", "JPY", "CHF" };
 
-        for (int i = 0; i < count; i++)
-        {
-            contracts.Add(new PamContractModel
-            {
-                ContractId = $"PAM_{i}",
-                Currency = currencies[random.Next(currencies.Length)],
-                NotionalPrincipal = random.Next(100000, 10000000),
-                NominalInterestRate = random.NextDouble() * 5.0 + 1.0, // 1-6%
-                StatusDate = DateTime.Now.AddDays(-random.Next(30, 365)),
-                InitialExchangeDate = DateTime.Now.AddDays(-random.Next(10, 100)),
-                MaturityDate = DateTime.Now.AddYears(random.Next(1, 30))
-            });
-        }
-
-        return contracts;
-    }
-
-    /// <summary>
-    /// Generate mock ANN contracts for statistics
-    /// </summary>
-    private List<AnnContractModel> GenerateMockAnnContracts(int count)
-    {
-        var random = new Random(1042);
-        var contracts = new List<AnnContractModel>();
-        var currencies = new[] { "USD", "EUR", "GBP", "JPY", "CHF" };
-
-        for (int i = 0; i < count; i++)
-        {
-            contracts.Add(new AnnContractModel
-            {
-                ContractId = $"ANN_{i}",
-                Currency = currencies[random.Next(currencies.Length)],
-                NotionalPrincipal = random.Next(100000, 10000000),
-                NominalInterestRate = random.NextDouble() * 5.0 + 1.0,
-                StatusDate = DateTime.Now.AddDays(-random.Next(30, 365)),
-                InitialExchangeDate = DateTime.Now.AddDays(-random.Next(10, 100)),
-                MaturityDate = DateTime.Now.AddYears(random.Next(1, 30)),
-                CycleOfPrincipalRedemption = "P3M" // Quarterly
-            });
-        }
-
-        return contracts;
-    }
 
     /// <summary>
     /// Compute portfolio-level summary metrics

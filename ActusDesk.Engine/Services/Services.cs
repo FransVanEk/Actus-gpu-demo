@@ -9,6 +9,42 @@ using Microsoft.Extensions.Logging;
 namespace ActusDesk.Engine.Services;
 
 /// <summary>
+/// Helper source that wraps an existing list of PAM contracts
+/// </summary>
+internal class PamContractListSource : IPamContractSource
+{
+    private readonly List<PamContractModel> _contracts;
+    
+    public PamContractListSource(List<PamContractModel> contracts)
+    {
+        _contracts = contracts;
+    }
+    
+    public Task<IEnumerable<PamContractModel>> GetContractsAsync(CancellationToken ct = default)
+    {
+        return Task.FromResult<IEnumerable<PamContractModel>>(_contracts);
+    }
+}
+
+/// <summary>
+/// Helper source that wraps an existing list of ANN contracts
+/// </summary>
+internal class AnnContractListSource : IAnnContractSource
+{
+    private readonly List<AnnContractModel> _contracts;
+    
+    public AnnContractListSource(List<AnnContractModel> contracts)
+    {
+        _contracts = contracts;
+    }
+    
+    public Task<IEnumerable<AnnContractModel>> GetContractsAsync(CancellationToken ct = default)
+    {
+        return Task.FromResult<IEnumerable<AnnContractModel>>(_contracts);
+    }
+}
+
+/// <summary>
 /// Service for loading and managing contract data (PAM and ANN)
 /// Handles contract loading from various sources and GPU upload
 /// </summary>
@@ -21,6 +57,8 @@ public class ContractsService
     private readonly ContractRegistry _contractRegistry;
     private PamDeviceContracts? _pamDeviceContracts;
     private AnnDeviceContracts? _annDeviceContracts;
+    private List<PamContractModel>? _pamSourceContracts;
+    private List<AnnContractModel>? _annSourceContracts;
 
     public ContractsService(
         ILogger<ContractsService> logger, 
@@ -48,14 +86,17 @@ public class ContractsService
     {
         _logger.LogInformation("Loading contracts from {Count} JSON files", files.Length);
         
-        // Dispose previous contracts if any
+        // Clear all previous contracts (replacing, not appending)
         _pamDeviceContracts?.Dispose();
+        _annDeviceContracts?.Dispose();
+        _pamSourceContracts = null;
+        _annSourceContracts = null;
         
-        // Use file source and load to GPU
+        // Load from source once
         var source = new PamFileSource(files);
-        _pamDeviceContracts = await _pamGpuProvider.LoadToGpuAsync(source, _gpuContext, ct);
+        await LoadPamFromSourceInternalAsync(source, ct);
         
-        _logger.LogInformation("Loaded {Count} PAM contracts to GPU", _pamDeviceContracts.Count);
+        _logger.LogInformation("Loaded {Count} PAM contracts to GPU", _pamDeviceContracts?.Count ?? 0);
     }
 
     /// <summary>
@@ -65,13 +106,30 @@ public class ContractsService
     {
         _logger.LogInformation("Loading PAM contracts from source: {SourceType}", source.GetType().Name);
         
-        // Dispose previous contracts if any
+        // Clear all previous contracts (replacing, not appending)
         _pamDeviceContracts?.Dispose();
+        _annDeviceContracts?.Dispose();
+        _pamSourceContracts = null;
+        _annSourceContracts = null;
         
-        // Load to GPU
-        _pamDeviceContracts = await _pamGpuProvider.LoadToGpuAsync(source, _gpuContext, ct);
+        await LoadPamFromSourceInternalAsync(source, ct);
         
-        _logger.LogInformation("Loaded {Count} PAM contracts to GPU", _pamDeviceContracts.Count);
+        _logger.LogInformation("Loaded {Count} PAM contracts to GPU", _pamDeviceContracts?.Count ?? 0);
+    }
+    
+    /// <summary>
+    /// Internal method to load PAM contracts from source without clearing other types
+    /// </summary>
+    private async Task LoadPamFromSourceInternalAsync(IPamContractSource source, CancellationToken ct)
+    {
+        // Get source contracts and store them (load once)
+        _pamSourceContracts = (await source.GetContractsAsync(ct)).ToList();
+        
+        // Create a wrapper source that returns the stored contracts
+        var listSource = new PamContractListSource(_pamSourceContracts);
+        
+        // Load to GPU from the stored list
+        _pamDeviceContracts = await _pamGpuProvider.LoadToGpuAsync(listSource, _gpuContext, ct);
     }
 
     /// <summary>
@@ -81,13 +139,27 @@ public class ContractsService
     {
         _logger.LogInformation("Loading ANN contracts from source: {SourceType}", source.GetType().Name);
         
-        // Dispose previous contracts if any
+        // Note: This only replaces ANN contracts, keeps PAM if they exist
         _annDeviceContracts?.Dispose();
         
-        // Load to GPU
-        _annDeviceContracts = await _annGpuProvider.LoadToGpuAsync(source, _gpuContext, ct);
+        await LoadAnnFromSourceInternalAsync(source, ct);
         
-        _logger.LogInformation("Loaded {Count} ANN contracts to GPU", _annDeviceContracts.Count);
+        _logger.LogInformation("Loaded {Count} ANN contracts to GPU", _annDeviceContracts?.Count ?? 0);
+    }
+    
+    /// <summary>
+    /// Internal method to load ANN contracts from source without clearing other types
+    /// </summary>
+    private async Task LoadAnnFromSourceInternalAsync(IAnnContractSource source, CancellationToken ct)
+    {
+        // Get source contracts and store them (load once)
+        _annSourceContracts = (await source.GetContractsAsync(ct)).ToList();
+        
+        // Create a wrapper source that returns the stored contracts
+        var listSource = new AnnContractListSource(_annSourceContracts);
+        
+        // Load to GPU from the stored list
+        _annDeviceContracts = await _annGpuProvider.LoadToGpuAsync(listSource, _gpuContext, ct);
     }
 
     /// <summary>
@@ -97,14 +169,17 @@ public class ContractsService
     {
         _logger.LogInformation("Generating {Count} mock PAM contracts", contractCount);
         
-        // Dispose previous contracts if any
+        // Clear all previous contracts (replacing, not appending)
         _pamDeviceContracts?.Dispose();
+        _annDeviceContracts?.Dispose();
+        _pamSourceContracts = null;
+        _annSourceContracts = null;
         
         // Use mock source
         var source = new PamMockSource(contractCount, seed);
-        _pamDeviceContracts = await _pamGpuProvider.LoadToGpuAsync(source, _gpuContext, ct);
+        await LoadPamFromSourceInternalAsync(source, ct);
         
-        _logger.LogInformation("Generated and loaded {Count} mock PAM contracts to GPU", _pamDeviceContracts.Count);
+        _logger.LogInformation("Generated and loaded {Count} mock PAM contracts to GPU", _pamDeviceContracts?.Count ?? 0);
     }
 
     /// <summary>
@@ -114,14 +189,15 @@ public class ContractsService
     {
         _logger.LogInformation("Generating {Count} mock ANN contracts", contractCount);
         
-        // Dispose previous contracts if any
+        // Note: This only replaces ANN contracts, keeps PAM if they exist
         _annDeviceContracts?.Dispose();
+        _annSourceContracts = null;
         
         // Use mock source
         var source = new AnnMockSource(contractCount, seed);
-        _annDeviceContracts = await _annGpuProvider.LoadToGpuAsync(source, _gpuContext, ct);
+        await LoadAnnFromSourceInternalAsync(source, ct);
         
-        _logger.LogInformation("Generated and loaded {Count} mock ANN contracts to GPU", _annDeviceContracts.Count);
+        _logger.LogInformation("Generated and loaded {Count} mock ANN contracts to GPU", _annDeviceContracts?.Count ?? 0);
     }
 
     private const int AnnSeedOffset = 1000; // Offset for ANN seed to ensure variety when loading mixed contracts
@@ -167,6 +243,16 @@ public class ContractsService
     /// Get the ANN device contracts for GPU operations
     /// </summary>
     public AnnDeviceContracts? GetAnnDeviceContracts() => _annDeviceContracts;
+    
+    /// <summary>
+    /// Get the source PAM contracts (before GPU upload)
+    /// </summary>
+    public IReadOnlyList<PamContractModel>? GetPamSourceContracts() => _pamSourceContracts?.AsReadOnly();
+    
+    /// <summary>
+    /// Get the source ANN contracts (before GPU upload)
+    /// </summary>
+    public IReadOnlyList<AnnContractModel>? GetAnnSourceContracts() => _annSourceContracts?.AsReadOnly();
 
     public async Task LoadFromCacheAsync(string cachePath, CancellationToken ct = default)
     {
