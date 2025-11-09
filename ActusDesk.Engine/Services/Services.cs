@@ -87,8 +87,13 @@ public class ContractsService
         _logger.LogInformation("Loading contracts from {Count} JSON files", files.Length);
         
         // Clear all previous contracts (replacing, not appending)
+        // Synchronize GPU to ensure all operations complete before disposal
+        _gpuContext.Accelerator.Synchronize();
+        
         _pamDeviceContracts?.Dispose();
+        _pamDeviceContracts = null;
         _annDeviceContracts?.Dispose();
+        _annDeviceContracts = null;
         _pamSourceContracts = null;
         _annSourceContracts = null;
         
@@ -107,8 +112,13 @@ public class ContractsService
         _logger.LogInformation("Loading PAM contracts from source: {SourceType}", source.GetType().Name);
         
         // Clear all previous contracts (replacing, not appending)
+        // Synchronize GPU to ensure all operations complete before disposal
+        _gpuContext.Accelerator.Synchronize();
+        
         _pamDeviceContracts?.Dispose();
+        _pamDeviceContracts = null;
         _annDeviceContracts?.Dispose();
+        _annDeviceContracts = null;
         _pamSourceContracts = null;
         _annSourceContracts = null;
         
@@ -140,7 +150,12 @@ public class ContractsService
         _logger.LogInformation("Loading ANN contracts from source: {SourceType}", source.GetType().Name);
         
         // Note: This only replaces ANN contracts, keeps PAM if they exist
+        // Synchronize GPU to ensure all operations complete before disposal
+        _gpuContext.Accelerator.Synchronize();
+        
         _annDeviceContracts?.Dispose();
+        _annDeviceContracts = null;
+        _annSourceContracts = null;
         
         await LoadAnnFromSourceInternalAsync(source, ct);
         
@@ -170,8 +185,13 @@ public class ContractsService
         _logger.LogInformation("Generating {Count} mock PAM contracts", contractCount);
         
         // Clear all previous contracts (replacing, not appending)
+        // Synchronize GPU to ensure all operations complete before disposal
+        _gpuContext.Accelerator.Synchronize();
+        
         _pamDeviceContracts?.Dispose();
+        _pamDeviceContracts = null;
         _annDeviceContracts?.Dispose();
+        _annDeviceContracts = null;
         _pamSourceContracts = null;
         _annSourceContracts = null;
         
@@ -190,7 +210,11 @@ public class ContractsService
         _logger.LogInformation("Generating {Count} mock ANN contracts", contractCount);
         
         // Note: This only replaces ANN contracts, keeps PAM if they exist
+        // Synchronize GPU to ensure all operations complete before disposal
+        _gpuContext.Accelerator.Synchronize();
+        
         _annDeviceContracts?.Dispose();
+        _annDeviceContracts = null;
         _annSourceContracts = null;
         
         // Use mock source
