@@ -66,7 +66,7 @@ public class ValuationServiceTests : IDisposable
         });
 
         // Act
-        var result = await valuationService.RunValuationAsync(default, progress);
+        var result = await valuationService.RunValuationAsync(10, default, progress);
 
         // Assert
         Assert.NotNull(result);
@@ -107,7 +107,7 @@ public class ValuationServiceTests : IDisposable
         await contractsService.LoadMockContractsAsync(20);
 
         // Act
-        var result = await valuationService.RunValuationAsync();
+        var result = await valuationService.RunValuationAsync(10);
 
         // Assert
         Assert.NotNull(result);
@@ -161,7 +161,7 @@ public class ValuationServiceTests : IDisposable
         await contractsService.LoadMixedMockContractsAsync(100, seed: 42);
 
         // Act
-        var result = await valuationService.RunValuationAsync();
+        var result = await valuationService.RunValuationAsync(10);
 
         // Assert
         Assert.NotNull(result);
@@ -217,7 +217,7 @@ public class ValuationServiceTests : IDisposable
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
         {
-            await valuationService.RunValuationAsync(cts.Token, progress);
+            await valuationService.RunValuationAsync(10, cts.Token, progress);
         });
         
         _output.WriteLine("Valuation was successfully cancelled");
@@ -247,7 +247,7 @@ public class ValuationServiceTests : IDisposable
         // Don't load any contracts
 
         // Act
-        var result = await valuationService.RunValuationAsync();
+        var result = await valuationService.RunValuationAsync(10);
 
         // Assert
         Assert.NotNull(result);

@@ -1,0 +1,101 @@
+═══════════════════════════════════════════════════════════════════════════
+                  ActusDesk - Run Console Tab (Updated)
+═══════════════════════════════════════════════════════════════════════════
+
+BEFORE (Hard-coded 10 years, no CSV export):
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                           │
+│  ┌──────────────────────┐                                                │
+│  │  ▶ Start Valuation   │                                                │
+│  └──────────────────────┘                                                │
+│                                                                           │
+│  Status: Ready to run valuation                                          │
+│                                                                           │
+└─────────────────────────────────────────────────────────────────────────┘
+
+AFTER (Configurable period, CSV export option):
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Valuation Settings                                                      │
+│  ─────────────────────────────────────────────────────────────────────  │
+│                                                                           │
+│  Valuation Period (Years):  [ 10 ]  ← NEW! Change this value            │
+│                                                                           │
+│  ☑ Export results to CSV            ← NEW! Enable CSV export            │
+│                                                                           │
+│      CSV Path: [valuation_results.csv                            ]       │
+│                 ↑ NEW! Appears when checkbox is checked                  │
+│                                                                           │
+│  ┌──────────────────────┐                                                │
+│  │  ▶ Start Valuation   │                                                │
+│  └──────────────────────┘                                                │
+│                                                                           │
+│  Status: Ready to run valuation                                          │
+│                                                                           │
+│  Results                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────┐│
+│  │ [100.0%] Valuation complete!                                         ││
+│  │                                                                       ││
+│  │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                            ││
+│  │ Valuation Complete!                                                  ││
+│  │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                            ││
+│  │ Total Contracts: 10,000                                              ││
+│  │   - PAM Contracts: 6,000                                             ││
+│  │   - ANN Contracts: 4,000                                             ││
+│  │ Scenarios: 3                                                         ││
+│  │ Valuation Period: 2025-11-08 to 2035-11-08  ← Shows actual period   ││
+│  │ Duration: 125.50ms                                                   ││
+│  │                                                                       ││
+│  │ Exporting to CSV: valuation_results.csv...  ← NEW! Export status    ││
+│  │ Successfully exported results to CSV!       ← NEW! Confirmation      ││
+│  │                                                                       ││
+│  │ Total Event Days: 1,825                                              ││
+│  │ Total Events: 120,000                                                ││
+│  └─────────────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+                        CSV Output Format (NEW!)
+═══════════════════════════════════════════════════════════════════════════
+
+Header Row:
+  Scenario,Date,ContractId,ContractType,EventType,Payoff,PresentValue,Currency
+
+Data Rows (showing different scenarios):
+  Base Case,2025-11-08,PAM_0,PAM,IED,-500000.00,-500000.00,USD
+  Base Case,2026-02-08,PAM_0,PAM,IP,6250.00,6098.36,USD
+  Base Case,2026-05-08,PAM_0,PAM,IP,6250.00,5950.84,USD
+  
+  Rate +50bps,2025-11-08,PAM_0,PAM,IED,-500000.00,-500000.00,USD
+  Rate +50bps,2026-02-08,PAM_0,PAM,IP,6562.50,6390.24,USD
+  Rate +50bps,2026-05-08,PAM_0,PAM,IP,6562.50,6228.99,USD
+  
+  Rate -50bps,2025-11-08,PAM_0,PAM,IED,-500000.00,-500000.00,USD
+  Rate -50bps,2026-02-08,PAM_0,PAM,IP,5937.50,5811.78,USD
+  Rate -50bps,2026-05-08,PAM_0,PAM,IP,5937.50,5678.53,USD
+
+Features:
+  ✓ Scenario name in each row
+  ✓ Date clearly visible
+  ✓ All event details as columns
+  ✓ Easy to import into Excel, Python, R
+  ✓ Properly escaped CSV (handles commas, quotes)
+  ✓ Sorted for consistency
+
+═══════════════════════════════════════════════════════════════════════════
+                            Usage Example
+═══════════════════════════════════════════════════════════════════════════
+
+1. Set valuation period to 5 years (change "10" to "5")
+2. Check "Export results to CSV"
+3. Optionally change CSV path (default: valuation_results.csv)
+4. Click "▶ Start Valuation"
+5. Wait for completion
+6. CSV file automatically created with all scenarios
+
+Result: 
+  - valuation_results.csv created
+  - Contains events from all 3 scenarios
+  - Each event clearly tagged with scenario name
+  - Ready for analysis in Excel or other tools
+
+═══════════════════════════════════════════════════════════════════════════
