@@ -118,7 +118,12 @@ public partial class WorkspaceViewModel : ObservableObject
                 return;
             }
 
-            await _contractsService.LoadFromJsonAsync(new[] { ContractsFilePath });
+            // Run the loading operation on a background thread to keep UI responsive
+            await Task.Run(async () =>
+            {
+                await _contractsService.LoadFromJsonAsync(new[] { ContractsFilePath });
+            });
+
             UpdateContractCounts();
             StatusMessage = $"Loaded {ContractCount} contracts successfully (PAM: {PamContractCount}, ANN: {AnnContractCount})";
             _logger.LogInformation("Successfully loaded {Count} contracts", ContractCount);
@@ -144,8 +149,13 @@ public partial class WorkspaceViewModel : ObservableObject
             _logger.LogInformation("Generating mock contracts with distribution PAM: {PamPct}%, ANN: {AnnPct}%", 
                 PamPercentage, AnnPercentage);
 
-            // Load mixed PAM and ANN contracts based on registry percentages
-            await _contractsService.LoadMixedMockContractsAsync(TotalMockContracts, seed: 42);
+            // Run the loading operation on a background thread to keep UI responsive
+            await Task.Run(async () =>
+            {
+                // Load mixed PAM and ANN contracts based on registry percentages
+                await _contractsService.LoadMixedMockContractsAsync(TotalMockContracts, seed: 42);
+            });
+
             UpdateContractCounts();
             StatusMessage = $"Generated {ContractCount} mock contracts successfully (PAM: {PamContractCount} [{PamPercentage:F1}%], ANN: {AnnContractCount} [{AnnPercentage:F1}%])";
             _logger.LogInformation("Successfully generated {Count} mock contracts", ContractCount);

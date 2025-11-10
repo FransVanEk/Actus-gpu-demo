@@ -58,13 +58,20 @@ public partial class MainWindowViewModel : ObservableObject
     {
         try
         {
-            GpuName = _gpuContext.GpuName;
-            
+            // Capture values on background thread
+            var gpuName = _gpuContext.GpuName;
             var totalMemoryMB = _gpuContext.TotalMemoryBytes / (1024.0 * 1024.0);
             var allocatedMemoryMB = _gpuContext.AllocatedMemoryBytes / (1024.0 * 1024.0);
-            
-            GpuMemoryStatus = $"{allocatedMemoryMB:F0} MB / {totalMemoryMB:F0} MB";
-            GpuUtilizationPercent = _gpuContext.MemoryUtilizationPercent;
+            var memoryStatus = $"{allocatedMemoryMB:F0} MB / {totalMemoryMB:F0} MB";
+            var utilizationPercent = _gpuContext.MemoryUtilizationPercent;
+
+            // Update properties on UI thread
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                GpuName = gpuName;
+                GpuMemoryStatus = memoryStatus;
+                GpuUtilizationPercent = utilizationPercent;
+            });
         }
         catch (Exception ex)
         {
