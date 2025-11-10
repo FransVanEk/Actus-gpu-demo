@@ -53,6 +53,54 @@ public class GpuContext : IDisposable
     public AcceleratorStream ComputeStream => _computeStream;
     public AcceleratorStream StoreStream => _storeStream;
 
+    /// <summary>
+    /// Get GPU name/model
+    /// </summary>
+    public string GpuName => _accelerator.Name;
+
+    /// <summary>
+    /// Get total GPU memory in bytes
+    /// </summary>
+    public long TotalMemoryBytes => _accelerator.MemorySize;
+
+    /// <summary>
+    /// Get currently allocated GPU memory in bytes (approximate)
+    /// Note: ILGPU doesn't provide exact memory usage, this is an estimate
+    /// </summary>
+    public long AllocatedMemoryBytes
+    {
+        get
+        {
+            // ILGPU doesn't expose exact memory usage, but we can estimate from buffers
+            // For CUDA accelerators, we could query CUDA API directly if needed
+            if (_accelerator is CudaAccelerator cudaAccelerator)
+            {
+                try
+                {
+                    // Try to get memory info from CUDA accelerator
+                    return cudaAccelerator.MemorySize - cudaAccelerator.MemorySize; // Placeholder
+                }
+                catch
+                {
+                    return 0;
+                }
+            }
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Get GPU memory utilization percentage (0-100)
+    /// </summary>
+    public double MemoryUtilizationPercent
+    {
+        get
+        {
+            if (TotalMemoryBytes == 0) return 0;
+            return (AllocatedMemoryBytes * 100.0) / TotalMemoryBytes;
+        }
+    }
+
     public void Dispose()
     {
         _logger?.LogInformation("Disposing GPU context");

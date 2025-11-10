@@ -516,9 +516,11 @@
                 <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <TextBlock Text="GPU: " FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <TextBlock Text="Not Initialized" VerticalAlignment="Center" Margin="5,0,20,0" Foreground="Gray"/>
+                    <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Margin="5,0,20,0" Foreground="{StaticResource PrimaryBrush}"/>
                     <TextBlock Text="VRAM: " FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <TextBlock Text="0 MB / 0 MB" VerticalAlignment="Center" Margin="5,0,0,0" Foreground="Gray"/>
+                    <TextBlock Text="{Binding GpuMemoryStatus}" VerticalAlignment="Center" Margin="5,0,10,0" Foreground="Green"/>
+                    <TextBlock Text="Utilization: " FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding GpuUtilizationPercent, StringFormat='{}{0:F1}%'}" VerticalAlignment="Center" Margin="5,0,0,0" Foreground="Orange"/>
                 </StackPanel>
             </Grid>
         </Border>
