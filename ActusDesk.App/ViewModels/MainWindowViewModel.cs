@@ -66,12 +66,27 @@ public partial class MainWindowViewModel : ObservableObject
             var utilizationPercent = _gpuContext.MemoryUtilizationPercent;
 
             // Update properties on UI thread
-            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher != null)
             {
-                GpuName = gpuName;
-                GpuMemoryStatus = memoryStatus;
-                GpuUtilizationPercent = utilizationPercent;
-            });
+                if (dispatcher.CheckAccess())
+                {
+                    // Already on UI thread
+                    GpuName = gpuName;
+                    GpuMemoryStatus = memoryStatus;
+                    GpuUtilizationPercent = utilizationPercent;
+                }
+                else
+                {
+                    // Marshal to UI thread
+                    dispatcher.BeginInvoke(() =>
+                    {
+                        GpuName = gpuName;
+                        GpuMemoryStatus = memoryStatus;
+                        GpuUtilizationPercent = utilizationPercent;
+                    });
+                }
+            }
         }
         catch (Exception ex)
         {

@@ -13,7 +13,7 @@ public partial class WorkspaceViewModel : ObservableObject
     private readonly ILogger<WorkspaceViewModel> _logger;
 
     [ObservableProperty]
-    private string _contractsFilePath = "data/tests/actus-tests-pam.json";
+    private string _contractsFilePath = "data/tests/sample_contracts.json";
 
     [ObservableProperty]
     private string _statusMessage = "Ready";
