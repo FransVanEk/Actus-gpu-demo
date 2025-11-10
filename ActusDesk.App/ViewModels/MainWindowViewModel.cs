@@ -45,6 +45,13 @@ public partial class MainWindowViewModel : ObservableObject
         RunConsoleViewModel = runConsoleViewModel;
         _logger.LogInformation("MainWindowViewModel initialized");
 
+        // Set up automatic portfolio refresh when contracts are loaded
+        workspaceViewModel.SetContractsLoadedCallback(() =>
+        {
+            _logger.LogInformation("Contracts loaded, auto-refreshing portfolio");
+            portfolioViewModel.RefreshStatistics();
+        });
+
         // Initialize GPU info
         UpdateGpuInfo();
 

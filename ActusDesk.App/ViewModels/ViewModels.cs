@@ -11,6 +11,7 @@ public partial class WorkspaceViewModel : ObservableObject
 {
     private readonly ContractsService _contractsService;
     private readonly ILogger<WorkspaceViewModel> _logger;
+    private Action? _onContractsLoaded;
 
     [ObservableProperty]
     private string _contractsFilePath = "data/tests/sample_contracts.json";
@@ -46,6 +47,15 @@ public partial class WorkspaceViewModel : ObservableObject
         
         // Initialize from registry
         UpdatePercentagesFromRegistry();
+    }
+
+    /// <summary>
+    /// Set callback to be invoked when contracts are loaded
+    /// This will be called both during loading (for real-time updates) and after completion
+    /// </summary>
+    public void SetContractsLoadedCallback(Action callback)
+    {
+        _onContractsLoaded = callback;
     }
 
     partial void OnPamPercentageChanged(double value)
@@ -119,12 +129,29 @@ public partial class WorkspaceViewModel : ObservableObject
             }
 
             // Run the loading operation on a background thread to keep UI responsive
-            await Task.Run(async () =>
+            var loadTask = Task.Run(async () =>
             {
                 await _contractsService.LoadFromJsonAsync(new[] { ContractsFilePath });
             });
 
+            // Start parallel portfolio update task that polls during loading
+            var portfolioUpdateTask = Task.Run(async () =>
+            {
+                while (!loadTask.IsCompleted)
+                {
+                    await Task.Delay(100); // Update every 100ms during loading
+                    UpdateContractCounts();
+                    _onContractsLoaded?.Invoke(); // Trigger portfolio refresh in parallel
+                }
+            });
+
+            // Wait for loading to complete
+            await loadTask;
+
+            // Final update
             UpdateContractCounts();
+            _onContractsLoaded?.Invoke();
+            
             StatusMessage = $"Loaded {ContractCount} contracts successfully (PAM: {PamContractCount}, ANN: {AnnContractCount})";
             _logger.LogInformation("Successfully loaded {Count} contracts", ContractCount);
         }
@@ -150,13 +177,30 @@ public partial class WorkspaceViewModel : ObservableObject
                 PamPercentage, AnnPercentage);
 
             // Run the loading operation on a background thread to keep UI responsive
-            await Task.Run(async () =>
+            var loadTask = Task.Run(async () =>
             {
                 // Load mixed PAM and ANN contracts based on registry percentages
                 await _contractsService.LoadMixedMockContractsAsync(TotalMockContracts, seed: 42);
             });
 
+            // Start parallel portfolio update task that polls during loading
+            var portfolioUpdateTask = Task.Run(async () =>
+            {
+                while (!loadTask.IsCompleted)
+                {
+                    await Task.Delay(100); // Update every 100ms during loading
+                    UpdateContractCounts();
+                    _onContractsLoaded?.Invoke(); // Trigger portfolio refresh in parallel
+                }
+            });
+
+            // Wait for loading to complete
+            await loadTask;
+
+            // Final update
             UpdateContractCounts();
+            _onContractsLoaded?.Invoke();
+            
             StatusMessage = $"Generated {ContractCount} mock contracts successfully (PAM: {PamContractCount} [{PamPercentage:F1}%], ANN: {AnnContractCount} [{AnnPercentage:F1}%])";
             _logger.LogInformation("Successfully generated {Count} mock contracts", ContractCount);
         }
