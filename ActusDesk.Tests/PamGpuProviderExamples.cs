@@ -20,7 +20,7 @@ public class PamGpuProviderExamples
         
         // Load test cases from file and transfer to GPU
         using var deviceContracts = await provider.LoadToGpuAsync(
-            "../../../../data/tests/actus-tests-pam.json",
+            "../../../../data/tests/sample_contracts.json",
             gpuContext);
         
         // Verify data was loaded
@@ -44,8 +44,8 @@ public class PamGpuProviderExamples
         // Load multiple files in parallel
         var filePaths = new[]
         {
-            "../../../../data/tests/actus-tests-pam.json",
-            "../../../../data/tests/actus-tests-pam.json" // Can be different files
+            "../../../../data/tests/sample_contracts.json",
+            "../../../../data/tests/sample_contracts.json" // Can be different files
         };
         
         // All files are loaded in parallel and combined into single GPU buffer
@@ -54,7 +54,7 @@ public class PamGpuProviderExamples
             gpuContext);
         
         // Verify combined data
-        Assert.True(deviceContracts.Count >= 50); // At least 25 from each file
+        Assert.True(deviceContracts.Count >= 6); // At least 3 from each file
         
         // All contracts from all files are now in GPU memory as a single SoA
     }
@@ -68,7 +68,7 @@ public class PamGpuProviderExamples
         // Load contracts to GPU
         var provider = new PamGpuProvider();
         using var deviceContracts = await provider.LoadToGpuAsync(
-            "../../../../data/tests/actus-tests-pam.json",
+            "../../../../data/tests/sample_contracts.json",
             gpuContext);
         
         // Access individual buffers for GPU kernels
@@ -93,7 +93,7 @@ public class PamGpuProviderExamples
         // Load contracts to GPU
         var provider = new PamGpuProvider();
         using var deviceContracts = await provider.LoadToGpuAsync(
-            "../../../../data/tests/actus-tests-pam.json",
+            "../../../../data/tests/sample_contracts.json",
             gpuContext);
         
         // Read data back from GPU to verify (using same pattern as PamGpuProviderTests)

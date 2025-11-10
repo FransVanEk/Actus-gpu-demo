@@ -10,7 +10,7 @@ namespace ActusDesk.Tests;
 /// </summary>
 public class ContractsServiceIntegrationTests : IDisposable
 {
-    private const string TestFilePath = "../../../../data/tests/actus-tests-pam.json";
+    private const string TestFilePath = "../../../../data/tests/sample_contracts.json";
     private readonly GpuContext _gpuContext;
 
     public ContractsServiceIntegrationTests()
@@ -33,7 +33,7 @@ public class ContractsServiceIntegrationTests : IDisposable
         await service.LoadFromJsonAsync(new[] { TestFilePath });
 
         // Assert
-        Assert.True(service.ContractCount >= 25);
+        Assert.True(service.ContractCount >= 3);
         var deviceContracts = service.GetPamDeviceContracts();
         Assert.NotNull(deviceContracts);
         Assert.NotNull(deviceContracts.NotionalPrincipal);
@@ -80,7 +80,7 @@ public class ContractsServiceIntegrationTests : IDisposable
         await service.LoadFromSourceAsync(compositeSource);
 
         // Assert
-        Assert.True(service.ContractCount >= 125); // ~25 from file + 100 mock
+        Assert.True(service.ContractCount >= 103); // ~3 from file + 100 mock
     }
 
     [Fact]

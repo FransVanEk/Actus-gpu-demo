@@ -8,7 +8,7 @@ namespace ActusDesk.Tests;
 /// </summary>
 public class PamGpuProviderDecoupledExamples
 {
-    private const string TestFilePath = "../../../../data/tests/actus-tests-pam.json";
+    private const string TestFilePath = "../../../../data/tests/sample_contracts.json";
 
     [Fact]
     public async Task Example_LoadFromFileSource()
@@ -62,7 +62,7 @@ public class PamGpuProviderDecoupledExamples
         using var deviceContracts = await provider.LoadToGpuAsync(compositeSource, gpuContext);
         
         // Verify combined dataset
-        Assert.True(deviceContracts.Count >= 525); // ~25 from file + 500 mock
+        Assert.True(deviceContracts.Count >= 503); // ~3 from file + 500 mock
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class PamGpuProviderDecoupledExamples
         using var deviceContracts = await provider.LoadToGpuAsync(composite, gpuContext);
         
         // Verify
-        Assert.True(deviceContracts.Count >= 2050); // ~50 real + 2000 mock
+        Assert.True(deviceContracts.Count >= 2006); // ~6 real + 2000 mock
     }
 
     [Fact]

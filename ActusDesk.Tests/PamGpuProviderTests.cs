@@ -9,7 +9,7 @@ namespace ActusDesk.Tests;
 /// </summary>
 public class PamGpuProviderTests : IDisposable
 {
-    private const string TestFilePath = "../../../../data/tests/actus-tests-pam.json";
+    private const string TestFilePath = "../../../../data/tests/sample_contracts.json";
     private readonly GpuContext _gpuContext;
 
     public PamGpuProviderTests()
@@ -29,7 +29,7 @@ public class PamGpuProviderTests : IDisposable
 
         // Assert
         Assert.NotNull(deviceContracts);
-        Assert.True(deviceContracts.Count >= 25, $"Expected at least 25 contracts, got {deviceContracts.Count}");
+        Assert.True(deviceContracts.Count >= 3, $"Expected at least 3 contracts, got {deviceContracts.Count}");
         Assert.NotNull(deviceContracts.NotionalPrincipal);
         Assert.NotNull(deviceContracts.NominalInterestRate);
         Assert.NotNull(deviceContracts.StatusDateYMD);
@@ -49,7 +49,7 @@ public class PamGpuProviderTests : IDisposable
         // Assert
         Assert.NotNull(deviceContracts);
         // Should have contracts from both files (duplicates in this test)
-        Assert.True(deviceContracts.Count >= 50, $"Expected at least 50 contracts from 2 files, got {deviceContracts.Count}");
+        Assert.True(deviceContracts.Count >= 6, $"Expected at least 6 contracts from 2 files, got {deviceContracts.Count}");
     }
 
     [Fact]

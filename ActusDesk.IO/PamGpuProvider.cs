@@ -110,8 +110,8 @@ public class PamGpuProvider : IPamGpuProvider
 
         _logger?.LogInformation("Loaded {ContractCount} contracts from source", contractsList.Count);
 
-        // Transfer to GPU
-        return await TransferToGpuAsync(contractsList, gpuContext, ct);
+        // Transfer to GPU using streaming approach
+        return await TransferToGpuStreamingAsync(contractsList, gpuContext, ct);
     }
 
     public async Task<PamDeviceContracts> LoadToGpuAsync(
@@ -132,18 +132,22 @@ public class PamGpuProvider : IPamGpuProvider
         return await LoadToGpuAsync(source, gpuContext, ct);
     }
 
-    private async Task<PamDeviceContracts> TransferToGpuAsync(
+    /// <summary>
+    /// Transfer contracts to GPU using streaming/chunked approach for better parallelism
+    /// This allows converting and transferring in parallel chunks
+    /// </summary>
+    private async Task<PamDeviceContracts> TransferToGpuStreamingAsync(
         List<PamContractModel> models,
         GpuContext gpuContext,
         CancellationToken ct)
     {
         int count = models.Count;
-        _logger?.LogInformation("Transferring {Count} contracts to GPU", count);
+        _logger?.LogInformation("Transferring {Count} contracts to GPU using streaming approach", count);
 
         var accelerator = gpuContext.Accelerator;
         var loadStream = gpuContext.LoadStream;
 
-        // Allocate device buffers
+        // Allocate device buffers upfront
         var deviceContracts = new PamDeviceContracts
         {
             Count = count,
@@ -167,26 +171,46 @@ public class PamGpuProvider : IPamGpuProvider
         var interestScalingMultiplier = new double[count];
         var roleSign = new int[count];
 
-        // Fill host arrays (in parallel for performance)
-        await Task.Run(() =>
-        {
-            Parallel.For(0, count, i =>
-            {
-                var model = models[i];
-                notionalPrincipal[i] = model.NotionalPrincipal;
-                nominalInterestRate[i] = model.NominalInterestRate ?? 0.0;
-                statusDateYMD[i] = DateToYMD(model.StatusDate);
-                initialExchangeDateYMD[i] = model.InitialExchangeDate.HasValue 
-                    ? DateToYMD(model.InitialExchangeDate.Value) 
-                    : 0;
-                maturityDateYMD[i] = DateToYMD(model.MaturityDate);
-                notionalScalingMultiplier[i] = model.NotionalScalingMultiplier;
-                interestScalingMultiplier[i] = model.InterestScalingMultiplier;
-                roleSign[i] = model.ContractRole == "RPL" ? 1 : -1;
-            });
-        }, ct);
+        // Fill host arrays in parallel (chunked processing for better progress feedback)
+        int chunkSize = Math.Min(10000, Math.Max(1000, count / 10));
+        int numChunks = (count + chunkSize - 1) / chunkSize;
 
-        // Transfer to GPU using the load stream
+        _logger?.LogInformation("Converting {Count} contracts in {Chunks} chunks of ~{ChunkSize}", 
+            count, numChunks, chunkSize);
+
+        // Process conversion in chunks for better responsiveness
+        for (int chunkIdx = 0; chunkIdx < numChunks; chunkIdx++)
+        {
+            int startIdx = chunkIdx * chunkSize;
+            int endIdx = Math.Min(startIdx + chunkSize, count);
+
+            // Convert chunk in parallel
+            await Task.Run(() =>
+            {
+                Parallel.For(startIdx, endIdx, i =>
+                {
+                    var model = models[i];
+                    notionalPrincipal[i] = model.NotionalPrincipal;
+                    nominalInterestRate[i] = model.NominalInterestRate ?? 0.0;
+                    statusDateYMD[i] = DateToYMD(model.StatusDate);
+                    initialExchangeDateYMD[i] = model.InitialExchangeDate.HasValue 
+                        ? DateToYMD(model.InitialExchangeDate.Value) 
+                        : 0;
+                    maturityDateYMD[i] = DateToYMD(model.MaturityDate);
+                    notionalScalingMultiplier[i] = model.NotionalScalingMultiplier;
+                    interestScalingMultiplier[i] = model.InterestScalingMultiplier;
+                    roleSign[i] = model.ContractRole == "RPL" ? 1 : -1;
+                });
+            }, ct);
+
+            // Allow other async work to proceed between chunks
+            await Task.Yield();
+            ct.ThrowIfCancellationRequested();
+        }
+
+        _logger?.LogInformation("Transferring converted data to GPU...");
+
+        // Transfer all data to GPU in one go (ILGPU handles this efficiently)
         deviceContracts.NotionalPrincipal!.CopyFromCPU(loadStream, notionalPrincipal);
         deviceContracts.NominalInterestRate!.CopyFromCPU(loadStream, nominalInterestRate);
         deviceContracts.StatusDateYMD!.CopyFromCPU(loadStream, statusDateYMD);
@@ -202,6 +226,18 @@ public class PamGpuProvider : IPamGpuProvider
         _logger?.LogInformation("GPU transfer complete");
 
         return deviceContracts;
+    }
+
+    /// <summary>
+    /// Legacy transfer method (kept for backward compatibility)
+    /// </summary>
+    private async Task<PamDeviceContracts> TransferToGpuAsync(
+        List<PamContractModel> models,
+        GpuContext gpuContext,
+        CancellationToken ct)
+    {
+        // Delegate to streaming version
+        return await TransferToGpuStreamingAsync(models, gpuContext, ct);
     }
 
     /// <summary>

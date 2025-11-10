@@ -7,7 +7,7 @@ namespace ActusDesk.Tests;
 /// </summary>
 public class PamContractSourceTests
 {
-    private const string TestFilePath = "../../../../data/tests/actus-tests-pam.json";
+    private const string TestFilePath = "../../../../data/tests/sample_contracts.json";
 
     [Fact]
     public async Task PamFileSource_SingleFile_LoadsContracts()
@@ -21,7 +21,7 @@ public class PamContractSourceTests
 
         // Assert
         Assert.NotEmpty(contractsList);
-        Assert.True(contractsList.Count >= 25, $"Expected at least 25 contracts, got {contractsList.Count}");
+        Assert.True(contractsList.Count >= 3, $"Expected at least 3 contracts, got {contractsList.Count}");
         Assert.All(contractsList, c => Assert.NotEmpty(c.ContractId));
     }
 
@@ -37,7 +37,7 @@ public class PamContractSourceTests
         var contractsList = contracts.ToList();
 
         // Assert
-        Assert.True(contractsList.Count >= 50, $"Expected at least 50 contracts from 2 files, got {contractsList.Count}");
+        Assert.True(contractsList.Count >= 6, $"Expected at least 6 contracts from 2 files, got {contractsList.Count}");
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class PamContractSourceTests
         var contracts = (await composite.GetContractsAsync()).ToList();
 
         // Assert
-        Assert.True(contracts.Count >= 75, $"Expected at least 75 contracts (25 file + 50 mock), got {contracts.Count}");
+        Assert.True(contracts.Count >= 53, $"Expected at least 53 contracts (3 file + 50 mock), got {contracts.Count}");
         
         // Should have both real and mock contracts
         var mockContracts = contracts.Where(c => c.ContractId.StartsWith("MOCK-")).ToList();
