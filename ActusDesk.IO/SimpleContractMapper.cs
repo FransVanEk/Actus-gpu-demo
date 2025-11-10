@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ActusDesk.Domain.Pam;
+using ActusDesk.Domain.Ann;
 
 namespace ActusDesk.IO;
 
@@ -21,6 +22,12 @@ public class SimpleContractData
     public string? CycleAnchorDateOfInterestPayment { get; set; }
     public string? ContractRole { get; set; }
     public string? StatusDate { get; set; }
+    
+    // ANN-specific fields
+    public string? CycleAnchorDateOfPrincipalRedemption { get; set; }
+    public string? CycleOfPrincipalRedemption { get; set; }
+    public double? NextPrincipalRedemptionPayment { get; set; }
+    public string? InterestCalculationBase { get; set; }
 }
 
 /// <summary>
@@ -107,22 +114,50 @@ public static class SimpleContractMapper
     }
 
     /// <summary>
-    /// Detect if JSON file is in simple contract format or ACTUS test format
+    /// Map simple contract data to AnnContractModel
     /// </summary>
-    public static async Task<bool> IsSimpleContractFormatAsync(string filePath, CancellationToken ct = default)
+    public static AnnContractModel MapToAnnModel(SimpleContractData contract)
     {
-        try
+        var model = new AnnContractModel
         {
-            var json = await File.ReadAllTextAsync(filePath, ct);
-            json = json.TrimStart();
-            
-            // Simple format starts with array: [
-            // ACTUS test format starts with object: {
-            return json.StartsWith("[");
-        }
-        catch
-        {
-            return false;
-        }
+            ContractId = contract.Id ?? "",
+            Currency = contract.Currency ?? "USD",
+            ContractRole = contract.ContractRole ?? "RPA",
+            NotionalPrincipal = contract.NotionalPrincipal ?? 0,
+            NominalInterestRate = contract.NominalInterestRate,
+            DayCountConvention = MapDayCountConvention(contract.DayCountConvention),
+            ContractPerformance = "PF",
+            NotionalScalingMultiplier = 1.0,
+            InterestScalingMultiplier = 1.0,
+            NextPrincipalRedemptionPayment = contract.NextPrincipalRedemptionPayment,
+            InterestCalculationBase = contract.InterestCalculationBase ?? "NT"
+        };
+
+        // Parse dates
+        if (!string.IsNullOrWhiteSpace(contract.StatusDate))
+            model.StatusDate = DateTime.Parse(contract.StatusDate);
+        else
+            model.StatusDate = DateTime.Now.Date;
+
+        if (!string.IsNullOrWhiteSpace(contract.InitialExchangeDate))
+            model.InitialExchangeDate = DateTime.Parse(contract.InitialExchangeDate);
+
+        if (!string.IsNullOrWhiteSpace(contract.MaturityDate))
+            model.MaturityDate = DateTime.Parse(contract.MaturityDate);
+
+        // Parse cycles
+        if (!string.IsNullOrWhiteSpace(contract.CycleOfInterestPayment))
+            model.CycleOfInterestPayment = contract.CycleOfInterestPayment;
+
+        if (!string.IsNullOrWhiteSpace(contract.CycleAnchorDateOfInterestPayment))
+            model.CycleAnchorDateOfInterestPayment = DateTime.Parse(contract.CycleAnchorDateOfInterestPayment);
+
+        if (!string.IsNullOrWhiteSpace(contract.CycleOfPrincipalRedemption))
+            model.CycleOfPrincipalRedemption = contract.CycleOfPrincipalRedemption;
+
+        if (!string.IsNullOrWhiteSpace(contract.CycleAnchorDateOfPrincipalRedemption))
+            model.CycleAnchorDateOfPrincipalRedemption = DateTime.Parse(contract.CycleAnchorDateOfPrincipalRedemption);
+
+        return model;
     }
 }

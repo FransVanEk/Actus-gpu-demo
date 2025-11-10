@@ -18,6 +18,7 @@ public interface IAnnContractSource
 
 /// <summary>
 /// File-based ANN contract source that loads from JSON files
+/// Loads simple contract array format only
 /// </summary>
 public class AnnFileSource : IAnnContractSource
 {
@@ -35,19 +36,25 @@ public class AnnFileSource : IAnnContractSource
 
     public async Task<IEnumerable<AnnContractModel>> GetContractsAsync(CancellationToken ct = default)
     {
-        // Load all files in parallel
-        var loadTasks = _filePaths.Select(path => LoadFileAsync(path, ct)).ToList();
-        var allTestCases = await Task.WhenAll(loadTasks);
+        var allContracts = new List<AnnContractModel>();
 
-        // Flatten and map all test cases
-        return allTestCases
-            .SelectMany(testCases => testCases.Values)
-            .Select(testCase => ActusAnnMapper.MapToAnnModel(testCase.Terms));
+        foreach (var filePath in _filePaths)
+        {
+            var contracts = await LoadFileAsync(filePath, ct);
+            allContracts.AddRange(contracts);
+        }
+
+        return allContracts;
     }
 
-    private async Task<Dictionary<string, ActusTestCase>> LoadFileAsync(string filePath, CancellationToken ct)
+    private async Task<List<AnnContractModel>> LoadFileAsync(string filePath, CancellationToken ct)
     {
-        return await ActusAnnMapper.LoadTestCasesAsync(filePath, ct);
+        // Load simple contract array format: [ { "id": "ANN-001", ... }, ... ]
+        var simpleContracts = await SimpleContractMapper.LoadSimpleContractsAsync(filePath, ct);
+        return simpleContracts
+            .Where(c => string.Equals(c.Type, "ANN", StringComparison.OrdinalIgnoreCase))
+            .Select(c => SimpleContractMapper.MapToAnnModel(c))
+            .ToList();
     }
 }
 

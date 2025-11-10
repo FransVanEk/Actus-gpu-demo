@@ -18,7 +18,7 @@ public interface IPamContractSource
 
 /// <summary>
 /// File-based PAM contract source that loads from JSON files
-/// Auto-detects format: simple contract array or ACTUS test format
+/// Loads simple contract array format only
 /// </summary>
 public class PamFileSource : IPamContractSource
 {
@@ -49,26 +49,12 @@ public class PamFileSource : IPamContractSource
 
     private async Task<List<PamContractModel>> LoadFileAsync(string filePath, CancellationToken ct)
     {
-        // Auto-detect format based on JSON structure
-        var isSimpleFormat = await SimpleContractMapper.IsSimpleContractFormatAsync(filePath, ct);
-
-        if (isSimpleFormat)
-        {
-            // Load simple contract array format: [ { "id": "PAM-001", ... }, ... ]
-            var simpleContracts = await SimpleContractMapper.LoadSimpleContractsAsync(filePath, ct);
-            return simpleContracts
-                .Where(c => string.Equals(c.Type, "PAM", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(c.Type))
-                .Select(c => SimpleContractMapper.MapToPamModel(c))
-                .ToList();
-        }
-        else
-        {
-            // Load ACTUS test format: { "pam01": { "terms": { ... }, "results": [ ... ] }, ... }
-            var testCases = await ActusPamMapper.LoadTestCasesAsync(filePath, ct);
-            return testCases.Values
-                .Select(testCase => ActusPamMapper.MapToPamModel(testCase.Terms))
-                .ToList();
-        }
+        // Load simple contract array format: [ { "id": "PAM-001", ... }, ... ]
+        var simpleContracts = await SimpleContractMapper.LoadSimpleContractsAsync(filePath, ct);
+        return simpleContracts
+            .Where(c => string.Equals(c.Type, "PAM", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(c.Type))
+            .Select(c => SimpleContractMapper.MapToPamModel(c))
+            .ToList();
     }
 }
 
